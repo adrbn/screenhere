@@ -132,7 +132,7 @@ Other cases:
 | Pointer in no display's bounds | Fall back to `CGMainDisplayID()` |
 | Mirrored displays | `CGGetDisplaysWithPoint` returns the mirror set; take the first, which is the one `screencapture` addresses |
 | Display hot-plugged between presses | Index is recomputed on every press, never cached |
-| Screen Recording permission not yet granted | macOS prompts on the first capture; the menu status line reflects the denied state and links to System Settings |
+| Screen Recording permission not yet granted | TCC attributes the `screencapture` subprocess to ScreenHere as the responsible process, so the prompt names ScreenHere. State is read with `CGPreflightScreenCaptureAccess()`; the menu status line reflects a denial and links to System Settings |
 | `activateSettings -u` unavailable | Change still lands, takes effect at next login; menu warns |
 
 ## 6. Testing
