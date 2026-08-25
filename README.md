@@ -105,22 +105,7 @@ swift test               # run the unit tests
 
 > Ad-hoc signing is a trap here, not just a Gatekeeper nuisance. TCC keys the Screen Recording grant to the app's designated requirement, which for an ad-hoc binary is its `cdhash` — a value that changes on every single build. The toggle in System Settings keeps *looking* enabled while `tccd` quietly denies every capture, and you get re-prompted forever. Developer ID pins the requirement to the team instead, and the grant survives rebuilds.
 
-> `swift run` launches the bare executable, which has no `Info.plist` identity — so `LSUIElement`, Launch at Login and the Screen Recording grant only behave correctly from the packaged `.app`. Always QA the installed app.
-
-## Releasing
-
-```bash
-./scripts/release.sh 1.0.1
-```
-
-That bumps the version, runs the tests, builds, signs, tags, pushes and publishes the GitHub release with the DMG attached. It refuses to run on a dirty tree, off `main`, behind `origin`, on an existing tag, or without a Developer ID identity — since an ad-hoc build would silently cost every user their Screen Recording grant.
-
-Releases are cut locally rather than in CI, because GitHub runners have no access to the certificate. To notarize as well, create the profile once and pass it in:
-
-```bash
-xcrun notarytool store-credentials screenhere --apple-id <apple-id> --team-id <team-id>
-NOTARY_PROFILE=screenhere ./scripts/release.sh 1.0.1
-```
+> `swift run` launches the bare executable, which has no `Info.plist` identity — so `LSUIElement`, Launch at Login and the Screen Recording grant only behave correctly from the packaged `.app`. Always test the installed app.
 
 The app icon is generated from `scripts/make-icon.swift`.
 
