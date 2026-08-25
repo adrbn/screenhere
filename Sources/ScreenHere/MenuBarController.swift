@@ -181,8 +181,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         // Prompts only the first time; afterwards macOS stays silent, so send
         // the user straight to the pane where the switch actually lives.
         CaptureRunner.requestScreenRecordingPermission()
-        if let url = URL(string:
-            "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+        // macOS 13+ serves this pane from an ExtensionKit extension. The old
+        // `com.apple.preference.security` identifier makes System Settings
+        // launch, fail to resolve the pane, and quit — which surfaces to the
+        // user as "System Settings is no longer open".
+        if let url = URL(string: "x-apple.systempreferences:"
+            + "com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture") {
             NSWorkspace.shared.open(url)
         }
     }
