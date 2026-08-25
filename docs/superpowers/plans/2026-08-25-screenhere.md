@@ -2088,9 +2088,14 @@ Expected: `minos 13.0`. Anything higher means the flags did not reach the compil
 - **Permissions** — Screen Recording, requested on first capture.
 - **Build from source** — `swift test`, then `bash scripts/build-dmg.sh`.
 
-- [ ] **Step 6: Add CI**
+- [ ] **Step 6: No CI — cut releases locally**
 
-Copy `.github/workflows/ci.yml` and `release.yml` from `../airpods_mic_fixer_reborn/.github/workflows/`, replacing every `PodFidelity` with `ScreenHere` and every `podfidelity` with `screenhere`.
+Deviation from this plan, decided during execution: **no GitHub Actions at all.**
+GitHub runners have no access to the Developer ID certificate, and an ad-hoc
+build silently costs every user their Screen Recording grant. `scripts/release.sh`
+cuts the release locally instead, and refuses to run without a Developer ID
+identity. `scripts/install.sh` builds, signs and installs into `/Applications`
+in one step.
 
 - [ ] **Step 7: Commit**
 
