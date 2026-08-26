@@ -14,9 +14,16 @@ enum PanelStrings {
     /// A missing permission outranks the takeover state: without it every
     /// capture silently produces nothing.
     static func problem(status: TakeoverController.Status,
-                        permissionGranted: Bool) -> String? {
+                        permissionGranted: Bool,
+                        systemStillHandlesShortcut: Bool = false) -> String? {
         if !permissionGranted, status != .off {
             return "Screen Recording permission needed"
+        }
+        // Both handlers live: macOS captures every display and ScreenHere
+        // captures one, so a single press produces a pile of screenshots.
+        // Silence here is what made that look like the app was broken.
+        if systemStillHandlesShortcut, status != .off {
+            return "macOS is still handling ⇧⌘3 — log out and back in"
         }
         switch status {
         case .onPendingLogout: return "Log out to finish taking over ⇧⌘3"

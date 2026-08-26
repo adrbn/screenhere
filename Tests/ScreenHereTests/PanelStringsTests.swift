@@ -27,6 +27,22 @@ final class PanelStringsTests: XCTestCase {
         XCTAssertNil(PanelStrings.problem(status: .off, permissionGranted: false))
     }
 
+    /// The failure that looked like "the app does nothing": macOS never let go
+    /// of ⇧⌘3, so every press captured every display on top of our one.
+    func testADoubleHandledShortcutIsCalledOut() {
+        XCTAssertEqual(
+            PanelStrings.problem(status: .on, permissionGranted: true,
+                                 systemStillHandlesShortcut: true),
+            "macOS is still handling ⇧⌘3 — log out and back in")
+    }
+
+    /// Not worth saying while ScreenHere is deliberately off: macOS handling
+    /// ⇧⌘3 is the whole point then.
+    func testADoubleHandledShortcutIsSilentWhileOff() {
+        XCTAssertNil(PanelStrings.problem(status: .off, permissionGranted: true,
+                                          systemStillHandlesShortcut: true))
+    }
+
     func testPendingLogoutTellsTheUserWhatToDo() {
         XCTAssertEqual(PanelStrings.problem(status: .onPendingLogout, permissionGranted: true),
                        "Log out to finish taking over ⇧⌘3")

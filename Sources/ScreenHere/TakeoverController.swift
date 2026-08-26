@@ -38,6 +38,16 @@ final class TakeoverController {
 
     private(set) var status: Status = .off
 
+    /// Whether the macOS entries are, right now, actually disabled. Read from
+    /// the live preferences rather than remembered from the write, so a
+    /// shortcut re-enabled behind our back is visible instead of silent.
+    var holdsShortcuts: Bool {
+        Self.managedHotkeys.allSatisfy { id in
+            guard let entry = store.entry(id) else { return true }
+            return !SymbolicHotkeyPlist.isEnabled(entry)
+        }
+    }
+
     var isOn: Bool {
         if case .off = status { return false }
         if case .failed = status { return false }
@@ -77,6 +87,15 @@ final class TakeoverController {
                 status = .failed(error.localizedDescription)
                 return
             }
+        }
+
+        // Trusting the write is not enough. If the entries are still enabled,
+        // macOS keeps handling ⇧⌘3 while we hold it too: every press fires both
+        // handlers and the user gets a pile of screenshots instead of one.
+        guard holdsShortcuts else {
+            restoreOriginals()
+            status = .failed("macOS would not release ⇧⌘3.")
+            return
         }
 
         let applied = store.applyNow()

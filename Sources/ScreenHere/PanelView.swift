@@ -63,8 +63,10 @@ struct PanelView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if let problem = PanelStrings.problem(status: model.status,
-                                                  permissionGranted: model.hasPermission) {
+            if let problem = PanelStrings.problem(
+                status: model.status,
+                permissionGranted: model.hasPermission,
+                systemStillHandlesShortcut: model.systemStillHandlesShortcut) {
                 Button(action: model.openScreenRecordingSettings) {
                     HStack(spacing: 5) {
                         Image(systemName: "exclamationmark.triangle.fill")

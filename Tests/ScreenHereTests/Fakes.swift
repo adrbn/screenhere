@@ -22,8 +22,13 @@ final class FakeSymbolicHotkeyStore: SymbolicHotkeyStore {
 
     func entry(_ id: Int) -> [String: Any]? { entries[id] }
 
+    /// When true, `write` reports success but changes nothing — the way a
+    /// `defaults write` that the system quietly ignores would behave.
+    var writesAreSilentlyIgnored = false
+
     func write(_ entry: [String: Any], for id: Int) throws {
         if let writeError { throw writeError }
+        guard !writesAreSilentlyIgnored else { return }
         entries[id] = entry
     }
 

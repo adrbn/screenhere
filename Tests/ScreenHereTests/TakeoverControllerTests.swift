@@ -87,6 +87,35 @@ final class TakeoverControllerTests: XCTestCase {
             store.entries[SymbolicHotkeyPlist.screenshotToDestination]!))
     }
 
+    /// The failure a user actually hits: the write is accepted, nothing
+    /// changes, and macOS keeps handling ⇧⌘3 — so both handlers fire and every
+    /// press produces a pile of screenshots. Trusting the write is not enough;
+    /// the entries have to be read back.
+    func testEnablingFailsWhenTheSystemSilentlyIgnoresTheWrite() {
+        let store = FakeSymbolicHotkeyStore()
+        store.writesAreSilentlyIgnored = true
+        let controller = makeController(store: store)
+        controller.enable()
+
+        XCTAssertFalse(controller.isOn)
+        if case .failed = controller.status {} else {
+            XCTFail("expected a failed status, got \(controller.status)")
+        }
+    }
+
+    func testAShortcutReEnabledBehindOurBackIsReported() {
+        let store = FakeSymbolicHotkeyStore()
+        let controller = makeController(store: store)
+        controller.enable()
+        XCTAssertTrue(controller.holdsShortcuts)
+
+        // Something else — the user, another app, a settings sync — turned it
+        // back on. macOS is handling ⇧⌘3 again and we would be duplicating it.
+        store.entries[SymbolicHotkeyPlist.screenshotToDestination] =
+            FakeSymbolicHotkeyStore.entry(modifiers: 1_179_648)
+        XCTAssertFalse(controller.holdsShortcuts)
+    }
+
     // MARK: - Disabling
 
     func testDisablingRestoresTheOriginalEntriesVerbatim() {

@@ -14,6 +14,8 @@ final class PanelModel: ObservableObject {
     @Published private(set) var activeDisplayName: String = ""
     @Published private(set) var destination: String = ""
     @Published private(set) var hasPermission: Bool = true
+    /// True when we believe we hold ⇧⌘3 but macOS has it enabled too.
+    @Published private(set) var systemStillHandlesShortcut: Bool = false
     @Published var isOn: Bool = false
     @Published var launchesAtLogin: Bool = false
 
@@ -73,6 +75,7 @@ final class PanelModel: ObservableObject {
             ?? "unknown display"
         destination = ScreenshotSettings.current
         hasPermission = CaptureRunner.hasScreenRecordingPermission
+        systemStillHandlesShortcut = takeover.isOn && !takeover.holdsShortcuts
         isOn = takeover.isOn
         launchesAtLogin = LoginItem.isEnabled
     }
