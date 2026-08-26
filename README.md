@@ -50,7 +50,8 @@ ScreenHere disables the macOS symbolic hotkeys for <kbd>⇧</kbd><kbd>⌘</kbd><
 3. Grant Screen Recording so it can capture:
    **System Settings → Privacy & Security → Screen Recording → enable _ScreenHere_.**
    macOS will ask you to quit and reopen the app — that's expected.
-4. Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>. Done.
+4. Say yes when ScreenHere offers to **launch at login**. This one matters: ScreenHere leaves the system shortcut disabled while it holds it, so a Mac that restarts without it running has <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> doing nothing at all until you reopen the app. (ScreenHere also hands the shortcut back when your Mac shuts down, so you are never stranded — but launching at login is what keeps it working.)
+5. Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>. Done.
 
 > **Install it in `/Applications`, not somewhere temporary.** The Screen Recording grant is keyed to the app's path as well as its code identity, so an app that moves has to be authorised again.
 

@@ -29,11 +29,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(showMenuBarIcon),
             name: MenuBarController.showIconNotification, object: nil)
 
+        // Logout and shutdown do not reliably reach applicationWillTerminate,
+        // and a machine that reboots without ScreenHere is left in the worst of
+        // both worlds: the system entries are still disabled in preferences and
+        // nothing is holding the combination, so ⇧⌘3 does nothing at all rather
+        // than falling back to stock macOS. Give the shortcuts back here.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self, selector: #selector(handlePowerOff),
+            name: NSWorkspace.willPowerOffNotification, object: nil)
+
         takeover.enable()
         if case .failed(let reason) = takeover.status {
             log("Takeover failed at launch: \(reason)")
         }
         didCompleteLaunch = true
+
+        offerLaunchAtLoginIfNeeded()
+    }
+
+    @objc private func handlePowerOff() {
+        log("System is powering off — restoring the macOS shortcuts.")
+        takeover.disable()
+    }
+
+    /// Asked once, the first time ScreenHere runs. Declining is remembered, and
+    /// the menu item stays available either way.
+    private func offerLaunchAtLoginIfNeeded() {
+        guard LoginItem.shouldOffer(hasOffered: LoginItem.hasOffered,
+                                    isAlreadyEnabled: LoginItem.isEnabled) else { return }
+        LoginItem.hasOffered = true
+
+        let alert = NSAlert()
+        alert.messageText = "Launch ScreenHere at login?"
+        alert.informativeText = """
+            ScreenHere only works while it is running. If it does not start with \
+            your Mac, ⇧⌘3 will do nothing at all after a restart until you open \
+            ScreenHere again.
+
+            You can change this any time from the menu.
+            """
+        alert.addButton(withTitle: "Launch at Login")
+        alert.addButton(withTitle: "Not Now")
+        NSApp.activate(ignoringOtherApps: true)   // an .accessory app needs this to come forward
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        do {
+            try LoginItem.setEnabled(true)
+        } catch {
+            let failure = NSAlert()
+            failure.messageText = "Couldn't enable Launch at Login"
+            failure.informativeText = error.localizedDescription
+            failure.runModal()
+        }
     }
 
     /// The common recovery path: double-clicking the .app while it is already
@@ -59,6 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// guards in the spec; the others cover the paths that never reach here.
     func applicationWillTerminate(_ notification: Notification) {
         DistributedNotificationCenter.default().removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
         takeover.disable()
     }
 
