@@ -44,7 +44,11 @@ git fetch origin main --quiet
     || die "tag v$VERSION already exists"
 
 CURRENT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST")
-[ "$CURRENT" != "$VERSION" ] || die "$PLIST is already at $VERSION"
+# This guard catches "you forgot to bump the version". On the very first
+# release there is nothing to bump yet, so it would be a false positive.
+if [ -n "$(git tag)" ]; then
+    [ "$CURRENT" != "$VERSION" ] || die "$PLIST is already at $VERSION"
+fi
 
 security find-identity -v -p codesigning 2>/dev/null | grep -q "Developer ID Application" \
     || die "no Developer ID Application identity in the keychain — an ad-hoc build would force every user to re-grant Screen Recording"
@@ -82,9 +86,13 @@ NOTARY_PROFILE="$NOTARY_PROFILE" ./scripts/build-dmg.sh
 
 echo "==> Committing, tagging and pushing…"
 git add "$PLIST"
-git commit -m "chore: release v$VERSION"
+if git diff --cached --quiet; then
+    echo "    $PLIST already at $VERSION — nothing to commit."
+else
+    git commit -m "chore: release v$VERSION"
+    git push origin main
+fi
 git tag -a "v$VERSION" -m "v$VERSION"
-git push origin main
 git push origin "v$VERSION"
 
 echo "==> Publishing the GitHub release…"
