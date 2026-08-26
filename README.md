@@ -7,6 +7,9 @@
 **<kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures the screen you're actually looking at.**
 Not the main one. Not both. The one your pointer is on.
 
+[![Download](https://img.shields.io/badge/⬇_Download-ScreenHere.dmg-7D4FF0?style=for-the-badge)](https://github.com/adrbn/screenhere/releases/latest)
+
+[![Latest release](https://img.shields.io/github/v/release/adrbn/screenhere?label=release&color=7D4FF0)](https://github.com/adrbn/screenhere/releases/latest)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/)
 [![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](Package.swift)
@@ -19,6 +22,15 @@ Not the main one. Not both. The one your pointer is on.
 ScreenHere is a tiny, open-source menu-bar utility that fixes one specific, daily annoyance on a multi-display Mac: <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> never captures the screen you meant.
 
 There is no new shortcut to learn. ScreenHere borrows the one you already use.
+
+<div align="center">
+<br/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/panel-dark.png">
+  <img alt="The ScreenHere panel: a live map of two displays with the one under the pointer highlighted, the destination, and the controls" src="docs/assets/panel-light.png" width="330">
+</picture>
+<br/><br/>
+</div>
 
 ## The problem
 
@@ -40,7 +52,7 @@ ScreenHere disables the macOS symbolic hotkeys for <kbd>⇧</kbd><kbd>⌘</kbd><
 - 🗺️ **A live map of your displays** — the menu-bar panel draws your actual arrangement, fills in the display your pointer is on, and tracks the pointer as it moves. You can see what ⇧⌘3 is about to capture before you press it.
 - 🪶 **Invisible** — a menu-bar agent with no Dock icon. Hide the menu-bar icon too and it disappears entirely until you reopen the app.
 - 🧩 **Nothing else changes** — your destination, folder, file format and shutter sound are macOS's own settings, untouched. Change them in the Screenshot app and ScreenHere follows.
-- ↩️ **Always reversible** — one menu item hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> straight back to macOS, and the app restores it on quit, on toggle-off, and even after a crash.
+- ↩️ **Always reversible** — one row in the panel hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> straight back to macOS, and the app restores it on quit, on shutdown, on toggle-off, and even after a crash.
 - 🔒 **Private by design** — it never touches your pixels. It resolves a display index and hands the job to Apple's own `screencapture`.
 - ⚡ **Native Swift**, zero dependencies, macOS 13 Ventura and later (including macOS 27).
 
@@ -81,7 +93,7 @@ On each press it reads the pointer's global position, finds the display whose bo
 
 Borrowing a system shortcut means the app owes you an exit. Four independent guards make sure you never end up with a dead <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>:
 
-1. **On quit** — `applicationWillTerminate` restores both entries. Same for toggling the app off.
+1. **On quit and on shutdown** — `applicationWillTerminate` restores both entries, and a `willPowerOff` observer does the same before the machine goes down, since logout does not reliably reach the former. Same for toggling the app off.
 2. **On the next launch** — if a previous run died holding them, ScreenHere restores them before doing anything else, then takes them again cleanly.
 3. **From the panel** — **Restore macOS Shortcuts** is always there, whatever state the app is in.
 4. **Without the app at all** — if you deleted ScreenHere mid-flight, paste this into Terminal:
@@ -93,6 +105,15 @@ Borrowing a system shortcut means the app owes you an exit. Four independent gua
    The same command with `29` and `1441792` restores <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>.
 
 When ScreenHere replaces an entry it writes back the **complete** original dictionary with only `enabled` flipped. A naive `-dict-add 28 '{enabled = 0;}'` would drop the `parameters` array, and the shortcut would stay dead even after being re-enabled.
+
+## Uninstall
+
+1. Open the panel and click **Restore macOS Shortcuts**. This is the step that matters — it hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> back to macOS.
+2. Quit ScreenHere and drag it from `/Applications` to the Trash.
+
+If you deleted the app without step 1, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> will do nothing at all. The Terminal command under [Giving the shortcut back](#giving-the-shortcut-back) restores it.
+
+ScreenHere stores nothing beyond a few preferences: `defaults delete com.screenhere.app` removes them.
 
 ## Build from source
 
@@ -115,7 +136,7 @@ The app icon is generated from `scripts/make-icon.swift`.
 
 - [x] Take over <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> and <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>
 - [x] Developer ID signing, so the Screen Recording grant survives updates
-- [ ] Notarization (remove the Gatekeeper warning)
+- [x] Notarized, so downloads open without a Gatekeeper detour
 - [ ] Optionally scope <kbd>⇧</kbd><kbd>⌘</kbd><kbd>4</kbd>'s crosshair to the pointer's display
 - [ ] Homebrew cask
 

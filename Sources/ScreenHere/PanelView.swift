@@ -148,7 +148,11 @@ struct PanelView: View {
     private var about: some View {
         VStack(spacing: 1) {
             PanelRow(icon: "arrow.down.circle", title: "Check for Updates",
-                     trailingText: UpdateChecker.currentVersion, action: onCheckUpdates)
+                     // "0.0.0" is the unbundled fallback; showing it would be a
+                     // lie, and there is nothing useful to put in its place.
+                     trailingText: UpdateChecker.currentVersion == "0.0.0"
+                        ? nil : UpdateChecker.currentVersion,
+                     action: onCheckUpdates)
             PanelRow(icon: "chevron.left.forwardslash.chevron.right", title: "View on GitHub",
                      action: onOpenGitHub)
             PanelRow(icon: "xmark.circle", title: "Quit ScreenHere",

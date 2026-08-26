@@ -20,6 +20,12 @@ final class PanelModel: ObservableObject {
     private let takeover: TakeoverController
     private var timer: Timer?
 
+    /// Where the live state is sampled from. Injectable so previews and the
+    /// documentation shots can pose a fixed arrangement without a second
+    /// display plugged in.
+    var sampleDisplays: () -> [DisplayInfo] = { CursorDisplay.activeDisplays() }
+    var samplePointer: () -> CGPoint = { CursorDisplay.cursorLocation() }
+
     init(takeover: TakeoverController) {
         self.takeover = takeover
         refresh()
@@ -44,13 +50,13 @@ final class PanelModel: ObservableObject {
     }
 
     func refresh() {
-        let displays = CursorDisplay.activeDisplays()
-        let pointer = CursorDisplay.cursorLocation()
+        let displays = sampleDisplays()
+        let pointer = samplePointer()
         self.displays = displays
         // Short enough to fit inside a map rectangle: "Built-in Retina Display"
         // becomes "Built-in", "MSI MD271UL" stays whole.
         displayNames = displays.map { d in
-            var name = CursorDisplay.name(of: d.id) ?? ""
+            var name = CursorDisplay.name(of: d.id) ?? posedNames[d.id] ?? ""
             // "Built-in Retina Display" -> "Built-in Retina": the word adds
             // nothing inside a rectangle that is visibly a display.
             if name.hasSuffix(" Display") { name.removeLast(" Display".count) }
@@ -60,12 +66,20 @@ final class PanelModel: ObservableObject {
         self.pointer = pointer
         activeDisplayIndex = CursorDisplay.captureIndex(
             for: pointer, in: displays, mainDisplayID: CGMainDisplayID()) - 1
-        activeDisplayName = CursorDisplay.displayName(at: pointer) ?? "unknown display"
+        let activeID = displays.indices.contains(activeDisplayIndex)
+            ? displays[activeDisplayIndex].id : nil
+        activeDisplayName = CursorDisplay.displayName(at: pointer)
+            ?? activeID.flatMap { posedNames[$0] }
+            ?? "unknown display"
         destination = ScreenshotSettings.current
         hasPermission = CaptureRunner.hasScreenRecordingPermission
         isOn = takeover.isOn
         launchesAtLogin = LoginItem.isEnabled
     }
+
+    /// Names for displays that have no matching NSScreen — only used by posed
+    /// previews, empty in the running app.
+    var posedNames: [CGDirectDisplayID: String] = [:]
 
     // MARK: - Actions
 
