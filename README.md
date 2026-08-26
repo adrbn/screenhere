@@ -37,6 +37,7 @@ If your main display is the external monitor and you're working on the laptop sc
 ScreenHere disables the macOS symbolic hotkeys for <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> and <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>, registers the same two combinations for itself, and on each press works out which display the pointer is on and captures only that one.
 
 - 🎯 **The right screen, every time** — resolved from the live pointer position, recomputed on every press, so hot-plugging a display never confuses it.
+- 🗺️ **A live map of your displays** — the menu-bar panel draws your actual arrangement, fills in the display your pointer is on, and tracks the pointer as it moves. You can see what ⇧⌘3 is about to capture before you press it.
 - 🪶 **Invisible** — a menu-bar agent with no Dock icon. Hide the menu-bar icon too and it disappears entirely until you reopen the app.
 - 🧩 **Nothing else changes** — your destination, folder, file format and shutter sound are macOS's own settings, untouched. Change them in the Screenshot app and ScreenHere follows.
 - ↩️ **Always reversible** — one menu item hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> straight back to macOS, and the app restores it on quit, on toggle-off, and even after a crash.
@@ -59,7 +60,7 @@ Builds are signed with Developer ID, so the grant survives updates: you authoris
 
 ### Hide the menu-bar icon
 
-Open the menu and check **Hide Menu Bar Icon**. The icon vanishes, the app keeps running, and <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> keeps working.
+Open the panel and click **Hide Menu Bar Icon**. The icon vanishes, the app keeps running, and <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> keeps working.
 
 To bring it back, **open ScreenHere again** from `/Applications` or Spotlight — the icon reappears for that session. (The hide preference still applies on the next launch. To show it permanently, uncheck **Hide Menu Bar Icon**.)
 
@@ -82,7 +83,7 @@ Borrowing a system shortcut means the app owes you an exit. Four independent gua
 
 1. **On quit** — `applicationWillTerminate` restores both entries. Same for toggling the app off.
 2. **On the next launch** — if a previous run died holding them, ScreenHere restores them before doing anything else, then takes them again cleanly.
-3. **From the menu** — **Restore macOS Shortcuts** is always there, whatever state the app is in.
+3. **From the panel** — **Restore macOS Shortcuts** is always there, whatever state the app is in.
 4. **Without the app at all** — if you deleted ScreenHere mid-flight, paste this into Terminal:
 
    ```bash
@@ -120,7 +121,7 @@ The app icon is generated from `scripts/make-icon.swift`.
 
 ## Contributing
 
-Issues and pull requests are welcome. The codebase is small and well-tested — start with [`Sources/ScreenHere/CursorDisplay.swift`](Sources/ScreenHere/CursorDisplay.swift) for the display-resolution logic, and [`Sources/ScreenHere/TakeoverController.swift`](Sources/ScreenHere/TakeoverController.swift) for the borrow-and-give-back state machine.
+Issues and pull requests are welcome. The codebase is small and well-tested — start with [`Sources/ScreenHere/CursorDisplay.swift`](Sources/ScreenHere/CursorDisplay.swift) for the display-resolution logic, [`Sources/ScreenHere/TakeoverController.swift`](Sources/ScreenHere/TakeoverController.swift) for the borrow-and-give-back state machine, and [`Sources/ScreenHere/PanelView.swift`](Sources/ScreenHere/PanelView.swift) for the panel.
 
 ## License
 

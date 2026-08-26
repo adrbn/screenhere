@@ -1,45 +1,43 @@
 import AppKit
 
-/// The menu-bar glyph: two overlapping displays with a pointer on the nearer
-/// one — the app's whole idea in 18×16 points. Drawn in code rather than taken
-/// from SF Symbols because no symbol says "this display, not that one", and a
-/// single even-odd path stays crisp as a template image.
+/// The menu-bar glyph: a screen with a pointer in it — the app's whole idea at
+/// 18×16. Drawn in code rather than taken from SF Symbols because no symbol
+/// says "this display, not that one".
+///
+/// Deliberately minimal: a hairline frame and a small solid pointer. Earlier
+/// attempts stacked two overlapping displays and knocked the pointer out of the
+/// near one; at menu-bar size that collapsed into an unreadable checkerboard.
 enum MenuBarIcon {
 
     static func statusImage() -> NSImage {
         let size = NSSize(width: 18, height: 16)
         let image = NSImage(size: size, flipped: false) { _ in
-            let path = NSBezierPath()
+            let frame = NSBezierPath(
+                roundedRect: NSRect(x: 2, y: 4.3, width: 14, height: 9.8),
+                xRadius: 2, yRadius: 2)
+            frame.lineWidth = 1.2
+            NSColor.black.setStroke()
+            frame.stroke()
 
-            // Far display: a frame, offset up and to the right.
-            path.append(NSBezierPath(roundedRect: NSRect(x: 6.5, y: 6.5, width: 10.5, height: 7.5),
-                                     xRadius: 1.5, yRadius: 1.5))
-            path.append(NSBezierPath(roundedRect: NSRect(x: 8, y: 8, width: 7.5, height: 4.5),
-                                     xRadius: 0.5, yRadius: 0.5))
-
-            // Near display: filled, drawn over the far one.
-            path.append(NSBezierPath(roundedRect: NSRect(x: 1, y: 2, width: 11, height: 8),
-                                     xRadius: 1.5, yRadius: 1.5))
-            path.append(NSBezierPath(rect: NSRect(x: 5.5, y: 0.5, width: 2, height: 1.5)))
-
-            // Pointer, punched out of the near display by the even-odd rule.
-            let pointer = NSBezierPath()
-            pointer.move(to: NSPoint(x: 5, y: 8.5))
-            pointer.line(to: NSPoint(x: 5, y: 3.5))
-            pointer.line(to: NSPoint(x: 6.4, y: 4.9))
-            pointer.line(to: NSPoint(x: 7.3, y: 3.1))
-            pointer.line(to: NSPoint(x: 8.4, y: 3.6))
-            pointer.line(to: NSPoint(x: 7.5, y: 5.4))
-            pointer.line(to: NSPoint(x: 9.4, y: 5.6))
-            pointer.close()
-            path.append(pointer)
-
-            path.windingRule = .evenOdd
             NSColor.black.setFill()
-            path.fill()
+            pointer(in: NSRect(x: 7.0, y: 6.4, width: 5.4, height: 5.4)).fill()
             return true
         }
         image.isTemplate = true   // let the menu bar tint it for light/dark
         return image
+    }
+
+    /// The pointer, authored on a 100-unit square so the same silhouette can be
+    /// scaled into the app icon.
+    static func pointer(in r: NSRect) -> NSBezierPath {
+        func P(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
+            NSPoint(x: r.minX + x / 100 * r.width, y: r.minY + y / 100 * r.height)
+        }
+        let p = NSBezierPath()
+        p.move(to: P(0, 100)); p.line(to: P(0, 22))
+        p.line(to: P(24, 46)); p.line(to: P(40, 15))
+        p.line(to: P(58, 24)); p.line(to: P(42, 54))
+        p.line(to: P(76, 58)); p.close()
+        return p
     }
 }

@@ -25,14 +25,14 @@ if [ -z "${SIGN_IDENTITY:-}" ]; then
 fi
 
 # Optional notarization: set NOTARY_PROFILE to a profile created once with
-#   xcrun notarytool store-credentials <name> --apple-id … --team-id … --password …
+#   xcrun notarytool store-credentials <name> --apple-id ... --team-id ... --password ...
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 
-echo "==> Generating the app icon…"
+echo "==> Generating the app icon..."
 swift scripts/make-icon.swift Resources/AppIcon.iconset
 iconutil -c icns Resources/AppIcon.iconset -o Resources/AppIcon.icns
 
-echo "==> Building ($CONFIG)…"
+echo "==> Building ($CONFIG)..."
 # Pin the deployment target: a current Swift toolchain otherwise stamps the
 # running OS version into LC_BUILD_VERSION, and LaunchServices then refuses the
 # bundle on older systems with kLSIncompatibleSystemVersionErr (-10825).
@@ -41,7 +41,7 @@ swift build -c "$CONFIG" -Xswiftc -target -Xswiftc arm64-apple-macos13.0
 BIN=".build/${CONFIG}/${EXECUTABLE}"
 APP_DIR="${OUT}/${APP_NAME}.app"
 
-echo "==> Assembling ${APP_DIR}…"
+echo "==> Assembling ${APP_DIR}..."
 rm -rf "$APP_DIR"
 mkdir -p "${APP_DIR}/Contents/MacOS" "${APP_DIR}/Contents/Resources"
 cp "$BIN" "${APP_DIR}/Contents/MacOS/${EXECUTABLE}"
@@ -77,7 +77,7 @@ codesign -d --requirements - "$APP_DIR" 2>&1 | tail -1
 # forcing Gatekeeper to ask Apple online at first launch — which fails offline.
 if [ -n "$NOTARY_PROFILE" ]; then
     ZIP="${OUT}/${EXECUTABLE}-app.zip"
-    echo "==> Notarizing the app…"
+    echo "==> Notarizing the app..."
     rm -f "$ZIP"
     ditto -c -k --keepParent "$APP_DIR" "$ZIP"
     xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait
@@ -87,21 +87,21 @@ if [ -n "$NOTARY_PROFILE" ]; then
 fi
 
 DMG="${OUT}/${EXECUTABLE}.dmg"
-echo "==> Creating ${DMG}…"
+echo "==> Creating ${DMG}..."
 rm -f "$DMG"
 hdiutil create -volname "$APP_NAME" -srcfolder "$APP_DIR" -ov -format UDZO "$DMG"
 
 # The disk image needs its own signature, and it must be applied *before*
 # notarization — signing afterwards would invalidate the stapled ticket.
 if [ -n "$SIGN_IDENTITY" ]; then
-    echo "==> Signing the disk image…"
+    echo "==> Signing the disk image..."
     codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG"
 fi
 
 if [ -n "$NOTARY_PROFILE" ]; then
-    echo "==> Notarizing (this waits on Apple, usually a few minutes)…"
+    echo "==> Notarizing (this waits on Apple, usually a few minutes)..."
     xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
-    echo "==> Stapling…"
+    echo "==> Stapling..."
     xcrun stapler staple "$DMG"
     xcrun stapler validate "$DMG"
     echo "==> Gatekeeper verdict (this is what a downloader gets):"

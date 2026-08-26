@@ -1,10 +1,10 @@
 #!/usr/bin/env swift
 import AppKit
 
-// Generates the ScreenHere app icon: a violet squircle carrying the same motif
-// as the menu-bar glyph — two overlapping displays with a pointer knocked out
-// of the near one. Renders the vector at every iconset size so small sizes stay
-// crisp; the caller runs `iconutil` to produce the .icns.
+// Generates the ScreenHere app icon: a flat violet squircle, a hairline white
+// screen, and the same pointer silhouette the menu-bar glyph uses. Deliberately
+// minimal — no gradient, no sheen, no second display. Renders the vector at
+// every iconset size; the caller runs `iconutil` for the .icns.
 
 let outDir = CommandLine.arguments.count > 1
     ? CommandLine.arguments[1]
@@ -23,6 +23,19 @@ let variants: [(String, Int)] = [
     ("icon_512x512@2x",1024),
 ]
 
+/// Same silhouette as Sources/ScreenHere/MenuBarIcon.swift, on a 100-unit square.
+func pointer(in r: NSRect) -> NSBezierPath {
+    func P(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
+        NSPoint(x: r.minX + x / 100 * r.width, y: r.minY + y / 100 * r.height)
+    }
+    let p = NSBezierPath()
+    p.move(to: P(0, 100)); p.line(to: P(0, 22))
+    p.line(to: P(24, 46)); p.line(to: P(40, 15))
+    p.line(to: P(58, 24)); p.line(to: P(42, 54))
+    p.line(to: P(76, 58)); p.close()
+    return p
+}
+
 func draw(_ size: CGFloat) -> NSBitmapImageRep {
     let px = Int(size)
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px,
@@ -37,61 +50,26 @@ func draw(_ size: CGFloat) -> NSBitmapImageRep {
     ctx.cgContext.setAllowsAntialiasing(true)
     ctx.cgContext.interpolationQuality = .high
 
-    // Everything below is authored on a 1024 grid and scaled to `size`.
+    // Authored on a 1024 grid and scaled to `size`.
     let f = size / 1024.0
     func R(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> NSRect {
         NSRect(x: x * f, y: y * f, width: w * f, height: h * f)
     }
-    func P(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: x * f, y: y * f) }
 
-    // --- background squircle (Apple grid: 824 content in 1024, radius ~185) ---
-    let bg = NSBezierPath(roundedRect: R(100, 100, 824, 824), xRadius: 185 * f, yRadius: 185 * f)
-    let grad = NSGradient(colors: [
-        NSColor(srgbRed: 0.20, green: 0.13, blue: 0.55, alpha: 1),   // deep indigo (bottom)
-        NSColor(srgbRed: 0.56, green: 0.31, blue: 0.96, alpha: 1),   // bright violet (top)
-    ])!
-    grad.draw(in: bg, angle: 90)
-
-    let sheen = NSBezierPath(roundedRect: R(100, 540, 824, 384), xRadius: 185 * f, yRadius: 185 * f)
-    NSColor(white: 1, alpha: 0.06).setFill()
-    sheen.fill()
-
+    let violet = NSColor(srgbRed: 0.49, green: 0.31, blue: 0.94, alpha: 1)
     let white = NSColor(srgbRed: 0.99, green: 0.99, blue: 1.0, alpha: 1)
 
-    // --- far display: an outline frame, up and to the right ---
-    let far = NSBezierPath()
-    far.append(NSBezierPath(roundedRect: R(500, 520, 320, 230), xRadius: 26 * f, yRadius: 26 * f))
-    far.append(NSBezierPath(roundedRect: R(534, 554, 252, 162), xRadius: 10 * f, yRadius: 10 * f))
-    far.windingRule = .evenOdd
-    NSColor(white: 1, alpha: 0.45).setFill()
-    far.fill()
+    // Apple's icon grid: 824 of content inside 1024, corner radius ~185.
+    violet.setFill()
+    NSBezierPath(roundedRect: R(100, 100, 824, 824), xRadius: 185 * f, yRadius: 185 * f).fill()
 
-    // --- near display: solid, with the pointer punched out of it ---
-    let shadow = NSShadow()
-    shadow.shadowColor = NSColor(white: 0, alpha: 0.22)
-    shadow.shadowBlurRadius = 30 * f
-    shadow.shadowOffset = NSSize(width: 0, height: -12 * f)
-    shadow.set()
+    let screen = NSBezierPath(roundedRect: R(268, 310, 488, 372), xRadius: 44 * f, yRadius: 44 * f)
+    screen.lineWidth = 34 * f
+    white.setStroke()
+    screen.stroke()
 
-    let near = NSBezierPath()
-    near.append(NSBezierPath(roundedRect: R(210, 300, 400, 285), xRadius: 32 * f, yRadius: 32 * f))
-    near.append(NSBezierPath(rect: R(370, 250, 80, 55)))                                  // stand
-    near.append(NSBezierPath(roundedRect: R(320, 225, 180, 42), xRadius: 18 * f, yRadius: 18 * f))
-
-    let pointer = NSBezierPath()
-    pointer.move(to: P(330, 520))
-    pointer.line(to: P(330, 330))
-    pointer.line(to: P(382, 382))
-    pointer.line(to: P(416, 314))
-    pointer.line(to: P(458, 332))
-    pointer.line(to: P(424, 400))
-    pointer.line(to: P(496, 408))
-    pointer.close()
-    near.append(pointer)
-
-    near.windingRule = .evenOdd     // the pointer becomes a hole onto the gradient
     white.setFill()
-    near.fill()
+    pointer(in: R(400, 380, 224, 224)).fill()
 
     NSGraphicsContext.restoreGraphicsState()
     return rep

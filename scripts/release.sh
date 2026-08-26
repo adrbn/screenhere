@@ -72,19 +72,19 @@ read -r -p "Continue? [y/N] " reply || true
 
 # ---------------------------------------------------------------- build
 
-echo "==> Running tests…"
+echo "==> Running tests..."
 swift test
 
-echo "==> Bumping $PLIST to $VERSION…"
+echo "==> Bumping $PLIST to $VERSION..."
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$PLIST"
 
-echo "==> Building and signing…"
+echo "==> Building and signing..."
 NOTARY_PROFILE="$NOTARY_PROFILE" ./scripts/build-dmg.sh
 
 # ---------------------------------------------------------------- publish
 
-echo "==> Committing, tagging and pushing…"
+echo "==> Committing, tagging and pushing..."
 git add "$PLIST"
 if git diff --cached --quiet; then
     echo "    $PLIST already at $VERSION — nothing to commit."
@@ -95,7 +95,7 @@ fi
 git tag -a "v$VERSION" -m "v$VERSION"
 git push origin "v$VERSION"
 
-echo "==> Publishing the GitHub release…"
+echo "==> Publishing the GitHub release..."
 gh release create "v$VERSION" "$DMG" --title "v$VERSION" --generate-notes
 
 echo
