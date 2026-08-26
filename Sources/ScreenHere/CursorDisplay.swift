@@ -57,6 +57,14 @@ enum CursorDisplay {
                      mainDisplayID: CGMainDisplayID())
     }
 
+    /// Human-readable name of a display, for the map labels.
+    static func name(of id: CGDirectDisplayID) -> String? {
+        NSScreen.screens.first { screen in
+            (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")]
+                as? NSNumber)?.uint32Value == id
+        }?.localizedName
+    }
+
     /// Human-readable name of the display holding `point`, for the menu.
     static func displayName(at point: CGPoint) -> String? {
         NSScreen.screens.first { screen in

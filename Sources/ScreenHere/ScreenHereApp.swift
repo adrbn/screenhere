@@ -50,7 +50,3 @@ struct ScreenHereApp: App {
         return alert.runModal() == .alertFirstButtonReturn
     }
 }
-
-enum MenuBarPrefs {
-    static let hideIconKey = "HideMenuBarIcon"
-}

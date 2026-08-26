@@ -8,6 +8,7 @@ import Combine
 /// a menu-bar agent has no business running a timer the rest of the day.
 final class PanelModel: ObservableObject {
     @Published private(set) var displays: [DisplayInfo] = []
+    @Published private(set) var displayNames: [String] = []
     @Published private(set) var pointer: CGPoint = .zero
     @Published private(set) var activeDisplayIndex: Int = 0     // 0-based
     @Published private(set) var activeDisplayName: String = ""
@@ -46,6 +47,16 @@ final class PanelModel: ObservableObject {
         let displays = CursorDisplay.activeDisplays()
         let pointer = CursorDisplay.cursorLocation()
         self.displays = displays
+        // Short enough to fit inside a map rectangle: "Built-in Retina Display"
+        // becomes "Built-in", "MSI MD271UL" stays whole.
+        displayNames = displays.map { d in
+            var name = CursorDisplay.name(of: d.id) ?? ""
+            // "Built-in Retina Display" -> "Built-in Retina": the word adds
+            // nothing inside a rectangle that is visibly a display.
+            if name.hasSuffix(" Display") { name.removeLast(" Display".count) }
+            guard name.count > 16 else { return name }
+            return String(name.prefix(15)).trimmingCharacters(in: .whitespaces) + "…"
+        }
         self.pointer = pointer
         activeDisplayIndex = CursorDisplay.captureIndex(
             for: pointer, in: displays, mainDisplayID: CGMainDisplayID()) - 1
