@@ -6,6 +6,11 @@ import Foundation
 /// shortcuts back.
 final class TakeoverController {
 
+    /// The app's single instance. Tests build their own with fakes; only the
+    /// SwiftUI scene and the delegate need to reach the live one.
+    static let shared = TakeoverController()
+
+
     enum Status: Equatable {
         case off
         case on

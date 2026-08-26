@@ -62,7 +62,7 @@ Builds are signed with Developer ID, so the grant survives updates: you authoris
 
 Open the panel and click **Hide Menu Bar Icon**. The icon vanishes, the app keeps running, and <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> keeps working.
 
-To bring it back, **open ScreenHere again** from `/Applications` or Spotlight — the icon reappears for that session. (The hide preference still applies on the next launch. To show it permanently, uncheck **Hide Menu Bar Icon**.)
+To bring it back, **open ScreenHere again** from `/Applications` or Spotlight. That is the documented way back, so it clears the preference outright — the icon stays visible from then on.
 
 ## How it works
 

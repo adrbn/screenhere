@@ -2,8 +2,7 @@ import AppKit
 import os
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let takeover = TakeoverController()
-    private var menu: MenuBarController?
+    private let takeover = TakeoverController.shared
     private var didCompleteLaunch = false
     private let log = OSLog(subsystem: "com.screenhere.app", category: "launch")
 
@@ -13,8 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if anotherInstanceIsRunning() {
             log("Second instance detected — forwarding show-icon request, then quitting.")
             DistributedNotificationCenter.default().postNotificationName(
-                MenuBarController.showIconNotification, object: nil,
-                options: [.deliverImmediately])
+                Self.showIconNotification, object: nil, options: [.deliverImmediately])
             NSApp.terminate(nil)
             return
         }
@@ -23,11 +21,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // shortcuts, give them back now.
         takeover.healAfterUncleanExit()
 
-        let controller = MenuBarController(takeover: takeover)
-        menu = controller
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(showMenuBarIcon),
-            name: MenuBarController.showIconNotification, object: nil)
+            name: Self.showIconNotification, object: nil)
 
         // Logout and shutdown do not reliably reach applicationWillTerminate,
         // and a machine that reboots without ScreenHere is left in the worst of
@@ -47,13 +43,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         offerLaunchAtLoginIfNeeded()
     }
 
+    /// Posted by a second launch to ask the running instance to reveal a
+    /// hidden menu-bar icon.
+    static let showIconNotification = Notification.Name("com.screenhere.app.ShowMenuBar")
+
+    /// The common recovery path: double-clicking the .app while it is already
+    /// running activates the existing process instead of spawning a new one,
+    /// so `applicationDidFinishLaunching` does not fire again.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard didCompleteLaunch else { return }
+        revealIcon()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication,
+                                      hasVisibleWindows flag: Bool) -> Bool {
+        revealIcon()
+        return true
+    }
+
+    @objc private func showMenuBarIcon() {
+        revealIcon()
+    }
+
+    /// Opening the app again is the documented way back from a hidden icon, so
+    /// it clears the preference outright rather than only for this session.
+    private func revealIcon() {
+        guard UserDefaults.standard.bool(forKey: MenuBarPrefs.hideIconKey) else { return }
+        log("Reopened while the icon was hidden — revealing it.")
+        UserDefaults.standard.set(false, forKey: MenuBarPrefs.hideIconKey)
+    }
+
     @objc private func handlePowerOff() {
         log("System is powering off — restoring the macOS shortcuts.")
         takeover.disable()
     }
 
     /// Asked once, the first time ScreenHere runs. Declining is remembered, and
-    /// the menu item stays available either way.
+    /// the panel's switch stays available either way.
     private func offerLaunchAtLoginIfNeeded() {
         guard LoginItem.shouldOffer(hasOffered: LoginItem.hasOffered,
                                     isAlreadyEnabled: LoginItem.isEnabled) else { return }
@@ -66,11 +92,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             your Mac, ⇧⌘3 will do nothing at all after a restart until you open \
             ScreenHere again.
 
-            You can change this any time from the menu.
+            You can change this any time from the panel.
             """
         alert.addButton(withTitle: "Launch at Login")
         alert.addButton(withTitle: "Not Now")
-        NSApp.activate(ignoringOtherApps: true)   // an .accessory app needs this to come forward
+        NSApp.activate(ignoringOtherApps: true)
         guard alert.runModal() == .alertFirstButtonReturn else { return }
 
         do {
@@ -83,27 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// The common recovery path: double-clicking the .app while it is already
-    /// running activates the existing process instead of spawning a new one,
-    /// so `applicationDidFinishLaunching` does not fire again.
-    func applicationDidBecomeActive(_ notification: Notification) {
-        guard didCompleteLaunch else { return }
-        guard let menu, !menu.isIconVisible else { return }
-        log("Reopened while icon hidden — revealing for this session.")
-        menu.unhideIcon()
-    }
-
-    func applicationShouldHandleReopen(_ sender: NSApplication,
-                                      hasVisibleWindows flag: Bool) -> Bool {
-        if let menu, !menu.isIconVisible {
-            log("Reopen event while icon hidden — revealing for this session.")
-            menu.unhideIcon()
-        }
-        return true
-    }
-
-    /// Hand ⇧⌘3 back to macOS on the way out. This is the first of the four
-    /// guards in the spec; the others cover the paths that never reach here.
+    /// Hand ⇧⌘3 back to macOS on the way out.
     func applicationWillTerminate(_ notification: Notification) {
         DistributedNotificationCenter.default().removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
@@ -116,10 +122,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return NSWorkspace.shared.runningApplications.contains {
             $0.bundleIdentifier == bundleID && $0.processIdentifier != myPID
         }
-    }
-
-    @objc private func showMenuBarIcon() {
-        menu?.unhideIcon()
     }
 
     private func log(_ message: String) {
