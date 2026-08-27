@@ -28,6 +28,10 @@ final class PanelModel: ObservableObject {
     var sampleDisplays: () -> [DisplayInfo] = { CursorDisplay.activeDisplays() }
     var samplePointer: () -> CGPoint = { CursorDisplay.cursorLocation() }
 
+    /// Names for displays that have no matching NSScreen — only used by posed
+    /// previews and the documentation shots, empty in the running app.
+    var posedNames: [CGDirectDisplayID: String] = [:]
+
     init(takeover: TakeoverController) {
         self.takeover = takeover
         refresh()
@@ -36,10 +40,19 @@ final class PanelModel: ObservableObject {
     var status: TakeoverController.Status { takeover.status }
 
     func startPolling() {
+        refreshEnvironment()
         refresh()
         timer?.invalidate()
-        let timer = Timer(timeInterval: 1.0 / 12.0, repeats: true) { [weak self] _ in
-            self?.refresh()
+        let timer = Timer(timeInterval: 1.0 / 10.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            // SwiftUI does not call onDisappear for MenuBarExtra content, so the
+            // timer outlived every close and polled forever. An agent with no
+            // visible window has no panel on screen and nothing to refresh.
+            guard NSApp.windows.contains(where: \.isVisible) else {
+                self.stopPolling()
+                return
+            }
+            self.refresh()
         }
         // .common so the pointer keeps updating while a control is being tracked.
         RunLoop.main.add(timer, forMode: .common)
@@ -51,38 +64,48 @@ final class PanelModel: ObservableObject {
         timer = nil
     }
 
+    /// Cheap sampling, safe to run continuously: two CoreGraphics calls and a
+    /// name lookup that only reruns when the display set actually changes.
     func refresh() {
         let displays = sampleDisplays()
         let pointer = samplePointer()
-        self.displays = displays
-        // Short enough to fit inside a map rectangle: "Built-in Retina Display"
-        // becomes "Built-in", "MSI MD271UL" stays whole.
-        displayNames = displays.map { d in
-            var name = CursorDisplay.name(of: d.id) ?? posedNames[d.id] ?? ""
-            // "Built-in Retina Display" -> "Built-in Retina": the word adds
-            // nothing inside a rectangle that is visibly a display.
-            if name.hasSuffix(" Display") { name.removeLast(" Display".count) }
-            guard name.count > 16 else { return name }
-            return String(name.prefix(15)).trimmingCharacters(in: .whitespaces) + "…"
+
+        if displays.map(\.id) != self.displays.map(\.id) {
+            self.displays = displays
+            displayNames = displays.map { d in
+                var name = CursorDisplay.name(of: d.id) ?? posedNames[d.id] ?? ""
+                // "Built-in Retina Display" -> "Built-in Retina": the word adds
+                // nothing inside a rectangle that is visibly a display.
+                if name.hasSuffix(" Display") { name.removeLast(" Display".count) }
+                guard name.count > 16 else { return name }
+                return String(name.prefix(15)).trimmingCharacters(in: .whitespaces) + "…"
+            }
+        } else if self.displays != displays {
+            self.displays = displays
         }
+
         self.pointer = pointer
         activeDisplayIndex = CursorDisplay.captureIndex(
-            for: pointer, in: displays, mainDisplayID: CGMainDisplayID()) - 1
+            for: pointer, in: displays, mainDisplayID: CGMainDisplayID())
         let activeID = displays.indices.contains(activeDisplayIndex)
             ? displays[activeDisplayIndex].id : nil
         activeDisplayName = CursorDisplay.displayName(at: pointer)
             ?? activeID.flatMap { posedNames[$0] }
             ?? "unknown display"
-        destination = ScreenshotSettings.current
-        hasPermission = CaptureRunner.hasScreenRecordingPermission
-        systemStillHandlesShortcut = takeover.isOn && !takeover.holdsShortcuts
-        isOn = takeover.isOn
-        launchesAtLogin = LoginItem.isEnabled
     }
 
-    /// Names for displays that have no matching NSScreen — only used by posed
-    /// previews, empty in the running app.
-    var posedNames: [CGDirectDisplayID: String] = [:]
+    /// Expensive sampling — an XPC round trip for the login item, a TCC query
+    /// for the permission, and a `defaults` subprocess to read the live hotkey
+    /// entries. Sampled when the panel opens and after an action changes
+    /// something, never on the timer: at 12 Hz this alone cost 20% of a core
+    /// and drove the window server to 50%.
+    func refreshEnvironment() {
+        destination = ScreenshotSettings.current
+        hasPermission = CaptureRunner.hasScreenRecordingPermission
+        isOn = takeover.isOn
+        launchesAtLogin = LoginItem.isEnabled
+        systemStillHandlesShortcut = takeover.isOn && !takeover.holdsShortcuts
+    }
 
     // MARK: - Actions
 
@@ -95,6 +118,7 @@ final class PanelModel: ObservableObject {
         } else {
             takeover.disable()
         }
+        refreshEnvironment()
         refresh()
     }
 
@@ -107,7 +131,7 @@ final class PanelModel: ObservableObject {
             alert.informativeText = error.localizedDescription
             alert.runModal()
         }
-        refresh()
+        refreshEnvironment()
     }
 
     func openScreenRecordingSettings() {
