@@ -7,12 +7,26 @@ import SwiftUI
 /// A borderless floating window rather than anything in the panel: it has to
 /// sit above every app, on a screen the user may not have focused, and survive
 /// a Space change while it is up.
+/// How far the card has been pushed, and how far it may go.
+@MainActor
+final class PreviewState: ObservableObject {
+    @Published var offset: CGFloat = 0
+    /// Room to the right of the card inside the window, so the card can travel
+    /// while the window stays put under the pointer.
+    static let travel: CGFloat = 620
+}
+
 @MainActor
 final class CapturePreview {
     static let shared = CapturePreview()
+    let state = PreviewState()
 
     private var window: NSWindow?
     private var dismissal: Timer?
+    /// Where the card sits when no gesture is moving it.
+    private var restingOrigin: NSPoint?
+    private var cardSize: NSSize = .zero
+    private var widened = false
 
     /// How long it stays before fading out, matching macOS's own cadence.
     private static let lifetime: TimeInterval = 6
@@ -31,30 +45,31 @@ final class CapturePreview {
             },
             onDismiss: { [weak self] in self?.dismiss(animated: true) })
 
-        let window = NSPanel(contentRect: NSRect(origin: .zero, size: size),
-                             styleMask: [.borderless, .nonactivatingPanel],
-                             backing: .buffered, defer: false)
+        let window = PreviewPanel(contentRect: NSRect(origin: .zero, size: size),
+                                  styleMask: [.borderless, .nonactivatingPanel],
+                                  backing: .buffered, defer: false)
         let hosting = NSHostingView(rootView: view)
-        // The window's own corners are square, so anything the card painted
-        // outside its rounded shape stayed visible at the angles as grey
-        // wedges. Round and clip the layer itself, and let AppKit cast the
-        // shadow from that shape rather than drawing one inside.
+        // Nothing is clipped or rounded here: the window is wider than the card
+        // during a gesture, so the card carries its own rounded surface and
+        // shadow. Clipping the host would cut the card off as it travels.
         hosting.wantsLayer = true
-        hosting.layer?.cornerRadius = Self.cornerRadius
-        hosting.layer?.cornerCurve = .continuous
-        hosting.layer?.masksToBounds = true
         hosting.layer?.backgroundColor = .clear
         window.contentView = hosting
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.hasShadow = true
+        window.hasShadow = false
         window.level = .statusBar
         window.ignoresMouseEvents = false
         window.isMovable = false
         // Follow the user across Spaces; a preview left behind on Space 1 is
         // worse than none, and it must never take focus from what they are doing.
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        window.setFrameOrigin(Self.origin(for: size, on: screen))
+        let resting = Self.origin(for: size, on: screen)
+        restingOrigin = resting
+        cardSize = size
+        widened = false
+        state.offset = 0
+        window.setFrameOrigin(resting)
         window.alphaValue = 0
         window.orderFrontRegardless()
 
@@ -67,6 +82,52 @@ final class CapturePreview {
         dismissal = Timer.scheduledTimer(withTimeInterval: Self.lifetime, repeats: false) {
             [weak self] _ in
             Task { @MainActor in self?.dismiss(animated: true) }
+        }
+    }
+
+    /// Widen the window to the right for the duration of a gesture.
+    ///
+    /// The card has to travel while the window stays under the pointer: a
+    /// window that moves away from the cursor stops receiving the scroll events
+    /// driving it, and the gesture dies halfway across. The extra width is
+    /// transparent and only exists while a gesture is in progress, so it never
+    /// swallows clicks meant for what is underneath.
+    func beginGesture() {
+        guard let window, let resting = restingOrigin, !widened else { return }
+        widened = true
+        window.setFrame(NSRect(x: resting.x, y: resting.y,
+                               width: cardSize.width + PreviewState.travel,
+                               height: cardSize.height),
+                        display: false)
+    }
+
+    private func endGesture() {
+        guard let window, let resting = restingOrigin, widened else { return }
+        widened = false
+        window.setFrame(NSRect(origin: resting, size: cardSize), display: false)
+    }
+
+    /// Follow the gesture.
+    func drift(by dx: CGFloat) {
+        beginGesture()
+        state.offset = max(0, dx)
+    }
+
+    func settle() {
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) { state.offset = 0 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.endGesture()
+        }
+    }
+
+    /// Send it off the right-hand edge and out of existence.
+    func throwOff() {
+        beginGesture()
+        dismissal?.invalidate()
+        dismissal = nil
+        withAnimation(.easeIn(duration: 0.26)) { state.offset = PreviewState.travel }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.26) { [weak self] in
+            self?.dismiss(animated: false)
         }
     }
 
@@ -116,14 +177,27 @@ final class CapturePreview {
     }
 }
 
-/// The card itself: the capture, a soft shadow, and the two gestures people
-/// expect from macOS's preview — click to reveal, drag to carry the file out.
+/// A panel that may leave the screen.
+///
+/// AppKit keeps windows visible by clamping their frame to the display, which
+/// is why a swipe stopped dead against the right-hand edge instead of carrying
+/// the card off it.
+private final class PreviewPanel: NSPanel {
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
+    }
+}
+
+/// The card itself: the capture, and the two gestures macOS's own preview has —
+/// throw it to the right to dismiss, drag it anywhere else to carry the file
+/// out. Click reveals it in the Finder.
 private struct CapturePreviewView: View {
     let image: NSImage
     let file: URL?
     let onOpen: () -> Void
     let onDismiss: () -> Void
 
+    @ObservedObject var state = CapturePreview.shared.state
     @State private var hovering = false
 
     var body: some View {
@@ -136,7 +210,6 @@ private struct CapturePreviewView: View {
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
                         .strokeBorder(Color.black.opacity(0.12), lineWidth: 0.5)
                 )
-                .onTapGesture(perform: onOpen)
 
             if hovering {
                 Button(action: onDismiss) {
@@ -146,7 +219,7 @@ private struct CapturePreviewView: View {
                         .foregroundStyle(.white, .black.opacity(0.55))
                 }
                 .buttonStyle(.plain)
-                .padding(5)
+                .padding(3)
                 .transition(.opacity)
             }
         }
@@ -156,23 +229,144 @@ private struct CapturePreviewView: View {
         .background(
             RoundedRectangle(cornerRadius: CapturePreview.cornerRadius, style: .continuous)
                 .fill(Color(nsColor: .windowBackgroundColor))
+                .shadow(color: .black.opacity(0.28), radius: 8, y: 3)
         )
+        .offset(x: state.offset)
+        // Fade as it goes, so a throw reads as the card leaving rather than
+        // sliding under something.
+        .opacity(1 - min(1, state.offset / 260) * 0.7)
+        .overlay(
+            GestureRouter(file: file,
+                          onDrift: { CapturePreview.shared.drift(by: $0) },
+                          onThrow: { CapturePreview.shared.throwOff() },
+                          onSettle: { CapturePreview.shared.settle() },
+                          onClick: onOpen)
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.12), value: hovering)
-        // Dragging carries the file, so it can be dropped into a message or a
-        // document exactly like macOS's own preview.
-        .modifier(DragOut(file: file))
     }
+
 }
 
-private struct DragOut: ViewModifier {
+/// Decides, from the first few points of movement, whether the pointer is
+/// throwing the card away or lifting the file out of it.
+///
+/// SwiftUI's `.onDrag` cannot do this: it starts a system drag session as soon
+/// as the pointer moves, so there is never a moment in which to conclude that
+/// the movement was a dismissal. AppKit hands over the raw events instead.
+private struct GestureRouter: NSViewRepresentable {
     let file: URL?
+    let onDrift: (CGFloat) -> Void
+    let onThrow: () -> Void
+    let onSettle: () -> Void
+    let onClick: () -> Void
 
-    func body(content: Content) -> some View {
-        if let file {
-            content.onDrag { NSItemProvider(contentsOf: file) ?? NSItemProvider() }
-        } else {
-            content
+    func makeNSView(context: Context) -> RouterView {
+        let view = RouterView()
+        view.file = file
+        view.onDrift = onDrift
+        view.onThrow = onThrow
+        view.onSettle = onSettle
+        view.onClick = onClick
+        return view
+    }
+
+    func updateNSView(_ view: RouterView, context: Context) {
+        view.file = file
+    }
+
+    final class RouterView: NSView, NSDraggingSource {
+        var file: URL?
+        var onDrift: ((CGFloat) -> Void)?
+        var onThrow: (() -> Void)?
+        var onSettle: (() -> Void)?
+        var onClick: (() -> Void)?
+
+        private enum Intent { case undecided, throwAway, carryFile }
+        private var intent: Intent = .undecided
+        private var start: NSPoint = .zero
+
+        /// Past this much rightward travel the card is considered thrown.
+        private static let throwDistance: CGFloat = 55
+        /// Movement below this is still a click, not a gesture.
+        private static let slop: CGFloat = 5
+
+        override func mouseDown(with event: NSEvent) {
+            intent = .undecided
+            start = event.locationInWindow
+        }
+
+        override func mouseDragged(with event: NSEvent) {
+            let dx = event.locationInWindow.x - start.x
+            let dy = event.locationInWindow.y - start.y
+
+            if intent == .undecided {
+                guard abs(dx) > Self.slop || abs(dy) > Self.slop else { return }
+                // Rightward and mostly horizontal is a throw; anything else is
+                // someone taking the file somewhere.
+                intent = (dx > 0 && abs(dx) > abs(dy) * 1.5) ? .throwAway : .carryFile
+                if intent == .carryFile { beginFileDrag(with: event) }
+            }
+
+            if intent == .throwAway { onDrift?(max(0, dx)) }
+        }
+
+        /// A two-finger swipe on the trackpad never presses the button, so it
+        /// arrives as scrolling rather than as a drag.
+        private var scrollTravel: CGFloat = 0
+
+        override func scrollWheel(with event: NSEvent) {
+            switch event.phase {
+            case .began:
+                scrollTravel = 0
+            case .changed:
+                // Follow the fingers: with natural scrolling, moving them right
+                // gives a positive delta.
+                scrollTravel += event.scrollingDeltaX
+                onDrift?(max(0, scrollTravel))
+            case .ended, .cancelled:
+                if scrollTravel > Self.throwDistance { onThrow?() } else { onSettle?() }
+                scrollTravel = 0
+            default:
+                break
+            }
+        }
+
+        override func mouseUp(with event: NSEvent) {
+            let dx = event.locationInWindow.x - start.x
+            let dy = event.locationInWindow.y - start.y
+
+            switch intent {
+            case .undecided:
+                if abs(dx) < Self.slop && abs(dy) < Self.slop { onClick?() }
+            case .throwAway:
+                if dx > Self.throwDistance { onThrow?() } else { onSettle?() }
+            case .carryFile:
+                break   // the dragging session owns the outcome
+            }
+            intent = .undecided
+        }
+
+        private func beginFileDrag(with event: NSEvent) {
+            guard let file else { return }
+            let item = NSDraggingItem(pasteboardWriter: file as NSURL)
+            // Drag the card's own likeness, so what leaves looks like what was
+            // grabbed rather than a generic file badge.
+            let snapshot = bitmapImageRepForCachingDisplay(in: bounds)
+            snapshot.map { cacheDisplay(in: bounds, to: $0) }
+            if let snapshot, let cg = snapshot.cgImage {
+                item.setDraggingFrame(bounds, contents: NSImage(cgImage: cg, size: bounds.size))
+            } else {
+                item.setDraggingFrame(bounds, contents: nil)
+            }
+            beginDraggingSession(with: [item], event: event, source: self)
+        }
+
+        func draggingSession(_ session: NSDraggingSession,
+                             sourceOperationMaskFor context: NSDraggingContext)
+            -> NSDragOperation {
+            .copy
         }
     }
 }

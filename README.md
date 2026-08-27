@@ -112,7 +112,7 @@ When ScreenHere replaces an entry it writes back the **complete** original dicti
 
 macOS shows a small preview after a screenshot, and puts it wherever it likes — which on a multi-display Mac is rarely the screen you just captured. There is no setting for that: the preview belongs to macOS's own capture UI, and its placement is not exposed.
 
-So **Preview on Captured Screen** in the panel draws ScreenHere's own instead, in the corner of the display the capture came from. Click it to reveal the file in Finder, drag it out to drop the file into another app, or leave it — it fades after a few seconds.
+So **Preview on Captured Screen** in the panel draws ScreenHere's own instead, in the corner of the display the capture came from. Click it to reveal the file in Finder, drag it out to drop the file into another app, flick it off to the right to dismiss it — with the pointer or with two fingers on the trackpad — or leave it, and it fades after a few seconds.
 
 It covers **every** capture, not only the ones ScreenHere handles: <kbd>⇧</kbd><kbd>⌘</kbd><kbd>4</kbd>, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>5</kbd> and the Screenshot app get a preview too. They have to — switching macOS's preview off switches it off for them as well, and a region capture sent straight to the clipboard would otherwise leave no file, no preview and no sign it had worked.
 
