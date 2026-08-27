@@ -34,10 +34,20 @@ final class CapturePreview {
         let window = NSPanel(contentRect: NSRect(origin: .zero, size: size),
                              styleMask: [.borderless, .nonactivatingPanel],
                              backing: .buffered, defer: false)
-        window.contentView = NSHostingView(rootView: view)
+        let hosting = NSHostingView(rootView: view)
+        // The window's own corners are square, so anything the card painted
+        // outside its rounded shape stayed visible at the angles as grey
+        // wedges. Round and clip the layer itself, and let AppKit cast the
+        // shadow from that shape rather than drawing one inside.
+        hosting.wantsLayer = true
+        hosting.layer?.cornerRadius = Self.cornerRadius
+        hosting.layer?.cornerCurve = .continuous
+        hosting.layer?.masksToBounds = true
+        hosting.layer?.backgroundColor = .clear
+        window.contentView = hosting
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.hasShadow = false            // the SwiftUI card draws its own
+        window.hasShadow = true
         window.level = .statusBar
         window.ignoresMouseEvents = false
         window.isMovable = false
@@ -79,13 +89,22 @@ final class CapturePreview {
 
     /// Keeps the capture's aspect ratio inside a sensible box, the way macOS's
     /// own preview does — a portrait display should not produce a wide card.
+    static let cornerRadius: CGFloat = 10
+
+    /// The card's own margin around the image, in points.
+    static let inset: CGFloat = 4
+
     static func size(for image: NSImage) -> NSSize {
         let maximum = NSSize(width: 232, height: 150)
         let source = image.size
         guard source.width > 0, source.height > 0 else { return maximum }
         let scale = min(maximum.width / source.width, maximum.height / source.height)
-        return NSSize(width: max(80, source.width * scale),
-                      height: max(56, source.height * scale))
+        let image = NSSize(width: max(80, source.width * scale),
+                           height: max(56, source.height * scale))
+        // The window covers the whole card. Sizing it to the image alone left
+        // the card's margin outside the window, where a transparent background
+        // showed the desktop through as a grey halo.
+        return NSSize(width: image.width + inset * 2, height: image.height + inset * 2)
     }
 
     /// Bottom-right of the captured screen, clear of the Dock.
@@ -111,13 +130,12 @@ private struct CapturePreviewView: View {
         ZStack(alignment: .topTrailing) {
             Image(nsImage: image)
                 .resizable()
-                .aspectRatio(contentMode: .fill)
-                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .aspectRatio(contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .strokeBorder(Color.black.opacity(0.12), lineWidth: 0.5)
                 )
-                .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
                 .onTapGesture(perform: onOpen)
 
             if hovering {
@@ -132,7 +150,13 @@ private struct CapturePreviewView: View {
                 .transition(.opacity)
             }
         }
-        .padding(6)
+        .padding(CapturePreview.inset)
+        // A real surface behind the image, the way macOS's own preview is a
+        // card rather than a bare screenshot floating on the desktop.
+        .background(
+            RoundedRectangle(cornerRadius: CapturePreview.cornerRadius, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor))
+        )
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.12), value: hovering)
         // Dragging carries the file, so it can be dropped into a message or a

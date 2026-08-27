@@ -127,9 +127,16 @@ final class PanelModel: ObservableObject {
     /// Turning this on takes over macOS's capture preview so ours can appear on
     /// the display that was actually captured; turning it off gives the user's
     /// setting straight back.
+    @MainActor
     func setOwnPreview(_ on: Bool) {
         UserDefaults.standard.set(on, forKey: PreviewPrefs.enabledKey)
-        if on { SystemThumbnail.suppress() } else { SystemThumbnail.restore() }
+        if on {
+            SystemThumbnail.suppress()
+            CaptureWatcher.shared.start()
+        } else {
+            SystemThumbnail.restore()
+            CaptureWatcher.shared.stop()
+        }
         refreshEnvironment()
     }
 

@@ -40,6 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         didCompleteLaunch = true
 
+        if PreviewCoordinator.isEnabled { CaptureWatcher.shared.start() }
+
         offerLaunchAtLoginIfNeeded()
     }
 

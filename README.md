@@ -114,6 +114,10 @@ macOS shows a small preview after a screenshot, and puts it wherever it likes �
 
 So **Preview on Captured Screen** in the panel draws ScreenHere's own instead, in the corner of the display the capture came from. Click it to reveal the file in Finder, drag it out to drop the file into another app, or leave it — it fades after a few seconds.
 
+It covers **every** capture, not only the ones ScreenHere handles: <kbd>⇧</kbd><kbd>⌘</kbd><kbd>4</kbd>, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>5</kbd> and the Screenshot app get a preview too. They have to — switching macOS's preview off switches it off for them as well, and a region capture sent straight to the clipboard would otherwise leave no file, no preview and no sign it had worked.
+
+> With the destination set to the clipboard there is no file to watch, so a capture is recognised by what lands on the pasteboard: a screenshot arrives as bare image data, while an image copied from a web page carries its markup and address along. That is a judgement rather than a certainty, so an image copied some other way may occasionally raise a preview.
+
 > This is the one place ScreenHere changes a macOS setting, and it is the reason the option is off by default. Turning it on remembers your `show-thumbnail` value and disables macOS's preview so you do not get two; turning it off, quitting, or shutting down puts your value back — including the common case where the key was never set at all, which is restored by removing it rather than writing `true`.
 
 ## Uninstall
