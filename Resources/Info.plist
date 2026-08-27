@@ -22,6 +22,18 @@
 	<string>13.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<!-- Sparkle auto-update. SUPublicEDKey is the public half of the EdDSA key
+	     pair; the private half never leaves .secrets/ and signs each appcast.
+	     This signature, plus the Developer ID the installed copy carries, is
+	     what makes an update acceptable - an ad-hoc build can never update. -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/adrbn/screenhere/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>Q/x038SSLVicTS2GZPz18GIeaPy74943ErVSi25f2oU=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 	<key>NSHumanReadableCopyright</key>
 	<string>MIT License. ScreenHere contributors.</string>
 	<key>NSPrincipalClass</key>

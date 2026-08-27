@@ -4,3 +4,6 @@ build/
 Resources/AppIcon.icns
 Resources/AppIcon.iconset/
 *.xcuserstate
+
+# Sparkle EdDSA signing key — losing it means installed copies can never update
+.secrets/

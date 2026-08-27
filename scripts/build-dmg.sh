@@ -48,6 +48,17 @@ cp "$BIN" "${APP_DIR}/Contents/MacOS/${EXECUTABLE}"
 cp "Resources/Info.plist" "${APP_DIR}/Contents/Info.plist"
 cp "Resources/AppIcon.icns" "${APP_DIR}/Contents/Resources/AppIcon.icns"
 
+# SwiftPM links against Sparkle but does not assemble app bundles, so the
+# framework has to be embedded by hand. The executable finds it through the
+# @executable_path/../Frameworks rpath set in Package.swift; without this the
+# app dies at launch with "Library not loaded: @rpath/Sparkle.framework".
+# ditto rather than cp -R: the bundle relies on its Versions/Current symlinks.
+SPARKLE_SRC=$(find .build/artifacts -type d -name "Sparkle.framework" -path "*macos-arm64*" | head -1)
+[ -n "$SPARKLE_SRC" ] || { echo "error: Sparkle.framework not found in .build/artifacts" >&2; exit 1; }
+mkdir -p "${APP_DIR}/Contents/Frameworks"
+ditto "$SPARKLE_SRC" "${APP_DIR}/Contents/Frameworks/Sparkle.framework"
+echo "==> Embedded $(basename "$SPARKLE_SRC")"
+
 # Why the identity matters beyond Gatekeeper: macOS keys the Screen Recording
 # (TCC) grant to the app's code identity. An ad-hoc signature has no stable
 # identity — its designated requirement is the cdhash, which changes on every
@@ -57,10 +68,11 @@ cp "Resources/AppIcon.icns" "${APP_DIR}/Contents/Resources/AppIcon.icns"
 # grant survives updates.
 if [ -n "$SIGN_IDENTITY" ]; then
     echo "==> Signing with: ${SIGN_IDENTITY}"
-    # No --deep: it is deprecated for signing, and this bundle has no nested code.
-    # --options runtime and --timestamp are both required for notarization.
-    codesign --force --options runtime --timestamp \
-        --sign "$SIGN_IDENTITY" "$APP_DIR"
+    # Deepest-first, because Sparkle's helpers keep the signature they were
+    # published with: Apple rejects them at notarization, and Sparkle refuses
+    # to launch its own installer when Autoupdate carries a different identity
+    # from the app. The script seals the app last.
+    ./scripts/sign_sparkle.sh "$APP_DIR" "$SIGN_IDENTITY"
 else
     echo "==> WARNING: no Developer ID Application identity found — ad-hoc signing."
     echo "    Gatekeeper will warn on download, and users will have to re-grant"
@@ -110,4 +122,10 @@ else
     echo "==> Skipping notarization (NOTARY_PROFILE unset)."
 fi
 
-echo "==> Done: $DMG"
+# Sparkle installs from a zip, not from a disk image.
+ZIP="${OUT}/${EXECUTABLE}.zip"
+echo "==> Creating ${ZIP} (the archive Sparkle installs from)..."
+rm -f "$ZIP"
+ditto -c -k --sequesterRsrc --keepParent "$APP_DIR" "$ZIP"
+
+echo "==> Done: $DMG and $ZIP"

@@ -18,6 +18,8 @@ VERSION="${1:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 PLIST="Resources/Info.plist"
 DMG="build/ScreenHere.dmg"
+ZIP="build/ScreenHere.zip"
+SPARKLE_KEY=".secrets/sparkle_ed_private_key"
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -61,6 +63,8 @@ else
     echo "      so first-time downloaders get a Gatekeeper warning."
 fi
 
+[ -f "$SPARKLE_KEY" ] || die "missing $SPARKLE_KEY - without it the appcast cannot be signed and no installed copy will ever accept this update"
+
 command -v gh >/dev/null || die "gh CLI not found"
 gh auth status >/dev/null 2>&1 || die "gh is not authenticated; run: gh auth login"
 
@@ -95,8 +99,26 @@ fi
 git tag -a "v$VERSION" -m "v$VERSION"
 git push origin "v$VERSION"
 
+echo "==> Signing the Sparkle appcast..."
+# Sparkle's signing tool ships as a package artifact of the build we just made.
+SIGN_UPDATE=$(find .build/artifacts -type f -name sign_update -not -path "*old_dsa*" | head -1)
+[ -x "$SIGN_UPDATE" ] || die "sign_update missing from .build/artifacts"
+
+git log --format=%s "$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo HEAD~10)..HEAD" \
+    > build/notes.txt 2>/dev/null || echo "Maintenance and improvements." > build/notes.txt
+
+python3 scripts/make_appcast.py \
+    --sign-update "$SIGN_UPDATE" --key-file "$SPARKLE_KEY" \
+    --zip "$ZIP" --short "$VERSION" --build "$VERSION" \
+    --url "https://github.com/adrbn/screenhere/releases/download/v$VERSION/ScreenHere.zip" \
+    --pubdate "$(date -u '+%a, %d %b %Y %H:%M:%S +0000')" \
+    --notes-file build/notes.txt --out build/appcast.xml
+
 echo "==> Publishing the GitHub release..."
-gh release create "v$VERSION" "$DMG" --title "v$VERSION" --generate-notes
+# The appcast must be attached to this release: SUFeedURL points at
+# releases/latest/download/appcast.xml, which resolves to the newest one.
+gh release create "v$VERSION" "$DMG" "$ZIP" build/appcast.xml \
+    --title "v$VERSION" --generate-notes
 
 echo
 echo "Released: $(gh release view "v$VERSION" --json url -q .url)"

@@ -12,6 +12,7 @@ import SwiftUI
 /// are rows too, not loose links in a footer.
 struct PanelView: View {
     @ObservedObject var model: PanelModel
+    @ObservedObject var updater = UpdaterController.shared
 
     var onRestoreShortcuts: () -> Void
     var onHideIcon: () -> Void
@@ -149,11 +150,14 @@ struct PanelView: View {
 
     private var about: some View {
         VStack(spacing: 1) {
-            PanelRow(icon: "arrow.down.circle", title: "Check for Updates",
+            PanelRow(icon: updater.availableVersion == nil
+                        ? "arrow.down.circle" : "arrow.down.circle.fill",
+                     title: updater.availableVersion.map { "Update to \($0)" }
+                        ?? "Check for Updates",
                      // "0.0.0" is the unbundled fallback; showing it would be a
                      // lie, and there is nothing useful to put in its place.
-                     trailingText: UpdateChecker.currentVersion == "0.0.0"
-                        ? nil : UpdateChecker.currentVersion,
+                     trailingText: UpdaterController.currentVersion == "0.0.0"
+                        ? nil : UpdaterController.currentVersion,
                      action: onCheckUpdates)
             PanelRow(icon: "chevron.left.forwardslash.chevron.right", title: "View on GitHub",
                      action: onOpenGitHub)

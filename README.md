@@ -12,7 +12,7 @@ Not the main one. Not both. The one your pointer is on.
 [![Latest release](https://img.shields.io/github/v/release/adrbn/screenhere?label=release&color=7D4FF0)](https://github.com/adrbn/screenhere/releases/latest)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/)
 [![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
-[![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](Package.swift)
+[![One dependency](https://img.shields.io/badge/dependencies-Sparkle-brightgreen)](Package.swift)
 [![License: MIT](https://img.shields.io/badge/License-MIT-8B5CF6.svg)](LICENSE)
 
 </div>
@@ -54,7 +54,8 @@ ScreenHere disables the macOS symbolic hotkeys for <kbd>⇧</kbd><kbd>⌘</kbd><
 - 🧩 **Nothing else changes** — your destination, folder, file format and shutter sound are macOS's own settings, untouched. Change them in the Screenshot app and ScreenHere follows.
 - ↩️ **Always reversible** — one row in the panel hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> straight back to macOS, and the app restores it on quit, on shutdown, on toggle-off, and even after a crash.
 - 🔒 **Private by design** — it never touches your pixels. It resolves a display index and hands the job to Apple's own `screencapture`.
-- ⚡ **Native Swift**, zero dependencies, macOS 13 Ventura and later (including macOS 27).
+- 🔄 **Updates itself** — signed releases install in place through Sparkle, and the shortcut is handed back to macOS across the relaunch so the swap never leaves a dead key.
+- ⚡ **Native Swift**, one dependency (Sparkle), macOS 13 Ventura and later (including macOS 27).
 
 ## Install
 
@@ -113,7 +114,7 @@ When ScreenHere replaces an entry it writes back the **complete** original dicti
 
 If you deleted the app without step 1, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> will do nothing at all. The Terminal command under [Giving the shortcut back](#giving-the-shortcut-back) restores it.
 
-ScreenHere stores nothing beyond a few preferences: `defaults delete com.screenhere.app` removes them.
+ScreenHere stores nothing beyond a few preferences: `defaults delete com.screenhere.app` removes them, including Sparkle's update schedule.
 
 ## Build from source
 
@@ -124,7 +125,7 @@ swift test               # run the unit tests
 ./scripts/build-dmg.sh   # produce build/ScreenHere.dmg
 ```
 
-`build-dmg.sh` picks up a **Developer ID Application** identity from the keychain automatically and falls back to ad-hoc signing when none is present.
+`build-dmg.sh` picks up a **Developer ID Application** identity from the keychain automatically and falls back to ad-hoc signing when none is present. It also embeds `Sparkle.framework` into the bundle, which SwiftPM does not do on its own, and re-signs Sparkle's nested helpers before sealing the app — they ship with their own signature, which Apple rejects at notarization and which stops Sparkle from launching its own installer.
 
 > Ad-hoc signing is a trap here, not just a Gatekeeper nuisance. TCC keys the Screen Recording grant to the app's designated requirement, which for an ad-hoc binary is its `cdhash` — a value that changes on every single build. The toggle in System Settings keeps *looking* enabled while `tccd` quietly denies every capture, and you get re-prompted forever. Developer ID pins the requirement to the team instead, and the grant survives rebuilds.
 
@@ -137,6 +138,7 @@ The app icon is generated from `scripts/make-icon.swift`.
 - [x] Take over <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> and <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>
 - [x] Developer ID signing, so the Screen Recording grant survives updates
 - [x] Notarized, so downloads open without a Gatekeeper detour
+- [x] In-app updates through Sparkle
 - [ ] Optionally scope <kbd>⇧</kbd><kbd>⌘</kbd><kbd>4</kbd>'s crosshair to the pointer's display
 - [ ] Homebrew cask
 

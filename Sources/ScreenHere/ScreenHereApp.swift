@@ -25,8 +25,8 @@ struct ScreenHereApp: App {
                     model.refresh()
                 },
                 onHideIcon: { hideIcon = confirmHidingIcon() },
-                onCheckUpdates: { UpdateChecker.checkInteractively() },
-                onOpenGitHub: { NSWorkspace.shared.open(UpdateChecker.repositoryURL) },
+                onCheckUpdates: { UpdaterController.shared.checkForUpdates() },
+                onOpenGitHub: { NSWorkspace.shared.open(UpdaterController.repositoryURL) },
                 onQuit: { NSApp.terminate(nil) })
         } label: {
             Image(nsImage: MenuBarIcon.statusImage())
