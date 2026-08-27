@@ -46,7 +46,7 @@ enum SystemThumbnail {
     private static let rememberedAbsent = "OriginalShowThumbnailWasAbsent"
 
     static var current: Bool {
-        isEnabled(stored: UserDefaults(suiteName: domain)?.object(forKey: key) as? Bool)
+        isEnabled(stored: ScreenshotSettings.defaults?.object(forKey: key) as? Bool)
     }
 
     static var remembered: Original? {
@@ -59,7 +59,7 @@ enum SystemThumbnail {
     /// Remember what is there, then turn macOS's preview off.
     static func suppress() {
         guard remembered == nil else { return }   // already ours; do not re-remember
-        let stored = UserDefaults(suiteName: domain)?.object(forKey: key) as? Bool
+        let stored = ScreenshotSettings.defaults?.object(forKey: key) as? Bool
         if let stored {
             UserDefaults.standard.set(stored, forKey: rememberedKey)
         } else {

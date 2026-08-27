@@ -6,11 +6,25 @@ import Foundation
 enum ScreenshotSettings {
     private static let domain = "com.apple.screencapture"
 
+    /// The system's capture preferences. Held rather than rebuilt: constructing
+    /// a suite is an XPC round trip, and reading these on a timer made that the
+    /// app's single largest cost.
+    static let defaults = UserDefaults(suiteName: domain)
+
     /// A short human label for the current destination.
     static var current: String {
-        let defaults = UserDefaults(suiteName: domain)
-        return describe(target: defaults?.string(forKey: "target-screenshot"),
-                        location: defaults?.string(forKey: "location"))
+        describe(target: defaults?.string(forKey: "target-screenshot"),
+                 location: defaults?.string(forKey: "location"))
+    }
+
+    /// Where captures are written when the destination is a file.
+    static var destinationFolder: URL {
+        let path = defaults?.string(forKey: "location") ?? "~/Desktop"
+        return URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+    }
+
+    static var goesToClipboard: Bool {
+        defaults?.string(forKey: "target-screenshot")?.lowercased() == "clipboard"
     }
 
     /// Pure. `target` is macOS's `target-screenshot`; `location` its `location`.

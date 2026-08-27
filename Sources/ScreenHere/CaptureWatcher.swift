@@ -41,7 +41,11 @@ final class CaptureWatcher {
         stop()
         primed = false
         lastChangeCount = NSPasteboard.general.changeCount
-        seenFiles = Set(CaptureLocator.candidates(in: destinationFolder()).map(\.url))
+        goesToClipboard = ScreenshotSettings.goesToClipboard
+        ticksSinceDestinationCheck = 0
+        seenFiles = goesToClipboard
+            ? []
+            : Set(CaptureLocator.candidates(in: destinationFolder()).map(\.url))
         primed = true
 
         // Polling rather than a filesystem source: it has to cover the
@@ -58,9 +62,20 @@ final class CaptureWatcher {
         timer = nil
     }
 
+    /// The destination rarely changes, so it is sampled every few seconds
+    /// rather than on every tick — reading it was costing more than the
+    /// watching itself.
+    private var ticksSinceDestinationCheck = 0
+    private var goesToClipboard = true
+
     private func tick() {
         guard primed, PreviewCoordinator.isEnabled else { return }
-        if ScreenshotSettings.current == "Clipboard" { checkPasteboard() } else { checkFolder() }
+        if ticksSinceDestinationCheck == 0 {
+            goesToClipboard = ScreenshotSettings.goesToClipboard
+        }
+        ticksSinceDestinationCheck = (ticksSinceDestinationCheck + 1) % 20
+
+        if goesToClipboard { checkPasteboard() } else { checkFolder() }
     }
 
     private func checkPasteboard() {
@@ -91,9 +106,5 @@ final class CaptureWatcher {
         PreviewCoordinator.present(image: image, file: newest.url)
     }
 
-    private func destinationFolder() -> URL {
-        let defaults = UserDefaults(suiteName: "com.apple.screencapture")
-        let path = defaults?.string(forKey: "location") ?? "~/Desktop"
-        return URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
-    }
+    private func destinationFolder() -> URL { ScreenshotSettings.destinationFolder }
 }
