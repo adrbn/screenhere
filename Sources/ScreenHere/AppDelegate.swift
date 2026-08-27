@@ -76,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func handlePowerOff() {
         log("System is powering off — restoring the macOS shortcuts.")
         takeover.disable()
+        SystemThumbnail.restore()
     }
 
     /// Asked once, the first time ScreenHere runs. Declining is remembered, and
@@ -114,6 +115,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DistributedNotificationCenter.default().removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         takeover.disable()
+        // The capture preview is a change to the user's own settings; it goes
+        // back whenever ScreenHere is not running to justify it.
+        SystemThumbnail.restore()
     }
 
     private func anotherInstanceIsRunning() -> Bool {

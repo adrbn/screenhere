@@ -18,6 +18,7 @@ final class PanelModel: ObservableObject {
     @Published private(set) var systemStillHandlesShortcut: Bool = false
     @Published var isOn: Bool = false
     @Published var launchesAtLogin: Bool = false
+    @Published var showsOwnPreview: Bool = false
 
     private let takeover: TakeoverController
     private var timer: Timer?
@@ -104,6 +105,7 @@ final class PanelModel: ObservableObject {
         hasPermission = CaptureRunner.hasScreenRecordingPermission
         isOn = takeover.isOn
         launchesAtLogin = LoginItem.isEnabled
+        showsOwnPreview = PreviewCoordinator.isEnabled
         systemStillHandlesShortcut = takeover.isOn && !takeover.holdsShortcuts
     }
 
@@ -120,6 +122,15 @@ final class PanelModel: ObservableObject {
         }
         refreshEnvironment()
         refresh()
+    }
+
+    /// Turning this on takes over macOS's capture preview so ours can appear on
+    /// the display that was actually captured; turning it off gives the user's
+    /// setting straight back.
+    func setOwnPreview(_ on: Bool) {
+        UserDefaults.standard.set(on, forKey: PreviewPrefs.enabledKey)
+        if on { SystemThumbnail.suppress() } else { SystemThumbnail.restore() }
+        refreshEnvironment()
     }
 
     func setLaunchAtLogin(_ on: Bool) {

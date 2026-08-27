@@ -54,6 +54,7 @@ ScreenHere disables the macOS symbolic hotkeys for <kbd>⇧</kbd><kbd>⌘</kbd><
 - 🧩 **Nothing else changes** — your destination, folder, file format and shutter sound are macOS's own settings, untouched. Change them in the Screenshot app and ScreenHere follows.
 - ↩️ **Always reversible** — one row in the panel hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> straight back to macOS, and the app restores it on quit, on shutdown, on toggle-off, and even after a crash.
 - 🔒 **Private by design** — it never touches your pixels. It resolves a display index and hands the job to Apple's own `screencapture`.
+- 🖼️ **The preview lands where you were looking** — optional: ScreenHere can draw the post-capture preview in the corner of the screen it came from, which macOS offers no way to do. Click it to reveal the file, drag it straight into a message. Off by default, because switching it on turns macOS's own preview off — and switching it back restores your setting exactly as it was.
 - 🔄 **Updates itself** — signed releases install in place through Sparkle, and the shortcut is handed back to macOS across the relaunch so the swap never leaves a dead key.
 - ⚡ **Native Swift**, one dependency (Sparkle), macOS 13 Ventura and later (including macOS 27).
 
@@ -107,6 +108,14 @@ Borrowing a system shortcut means the app owes you an exit. Four independent gua
 
 When ScreenHere replaces an entry it writes back the **complete** original dictionary with only `enabled` flipped. A naive `-dict-add 28 '{enabled = 0;}'` would drop the `parameters` array, and the shortcut would stay dead even after being re-enabled.
 
+### The capture preview
+
+macOS shows a small preview after a screenshot, and puts it wherever it likes — which on a multi-display Mac is rarely the screen you just captured. There is no setting for that: the preview belongs to macOS's own capture UI, and its placement is not exposed.
+
+So **Preview on Captured Screen** in the panel draws ScreenHere's own instead, in the corner of the display the capture came from. Click it to reveal the file in Finder, drag it out to drop the file into another app, or leave it — it fades after a few seconds.
+
+> This is the one place ScreenHere changes a macOS setting, and it is the reason the option is off by default. Turning it on remembers your `show-thumbnail` value and disables macOS's preview so you do not get two; turning it off, quitting, or shutting down puts your value back — including the common case where the key was never set at all, which is restored by removing it rather than writing `true`.
+
 ## Uninstall
 
 1. Open the panel and click **Restore macOS Shortcuts**. This is the step that matters — it hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> back to macOS.
@@ -139,6 +148,7 @@ The app icon is generated from `scripts/make-icon.swift`.
 - [x] Developer ID signing, so the Screen Recording grant survives updates
 - [x] Notarized, so downloads open without a Gatekeeper detour
 - [x] In-app updates through Sparkle
+- [x] Capture preview on the screen it came from
 - [ ] Optionally scope <kbd>⇧</kbd><kbd>⌘</kbd><kbd>4</kbd>'s crosshair to the pointer's display
 - [ ] Homebrew cask
 

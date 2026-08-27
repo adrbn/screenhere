@@ -141,7 +141,9 @@ final class TakeoverController {
         case HotkeyCombo.screenshotToClipboard.id: destination = .clipboard
         default: return
         }
-        capture(destination, currentDisplayIndex())
+        let index = currentDisplayIndex()
+        capture(destination, index)
+        Task { @MainActor in PreviewCoordinator.captureStarted(displayIndex: index) }
     }
 
     // MARK: - Original entries

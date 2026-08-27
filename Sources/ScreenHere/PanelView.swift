@@ -140,6 +140,16 @@ struct PanelView: View {
                     .tint(Theme.brand)
                     .labelsHidden()
             }
+            PanelRow(icon: "photo.on.rectangle.angled", title: "Preview on Captured Screen") {
+                Toggle("", isOn: Binding(get: { model.showsOwnPreview },
+                                         set: { model.setOwnPreview($0) }))
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .tint(Theme.brand)
+                    .labelsHidden()
+                    .help("Show the capture preview on the screen it came from, "
+                          + "instead of wherever macOS puts it")
+            }
             PanelRow(icon: "arrow.uturn.backward", title: "Restore macOS Shortcuts",
                      action: onRestoreShortcuts)
             PanelRow(icon: "eye.slash", title: "Hide Menu Bar Icon", action: onHideIcon)
