@@ -116,6 +116,49 @@ final class TakeoverControllerTests: XCTestCase {
         XCTAssertFalse(controller.holdsShortcuts)
     }
 
+    /// The bug a second machine hit. macOS only writes an AppleSymbolicHotKeys
+    /// entry once the user customises that shortcut; on a stock Mac there is no
+    /// entry 28 at all and the built-in default applies. Treating "no entry" as
+    /// "nothing to do" left macOS in charge while ScreenHere held the key too,
+    /// so one press produced a screenshot per display plus ours.
+    func testEnablingWorksOnAMacThatNeverCustomisedTheShortcuts() {
+        let store = FakeSymbolicHotkeyStore(entries: [:])
+        let controller = makeController(store: store)
+        controller.enable()
+
+        XCTAssertEqual(controller.status, .on)
+        for id in [SymbolicHotkeyPlist.screenshotToDestination,
+                   SymbolicHotkeyPlist.screenshotToClipboard] {
+            let written = try? XCTUnwrap(store.entries[id])
+            XCTAssertNotNil(written, "symbolic hotkey \(id) should have been written")
+            XCTAssertFalse(SymbolicHotkeyPlist.isEnabled(written!))
+            let value = written?["value"] as? [String: Any]
+            XCTAssertEqual((value?["parameters"] as? [Int])?.prefix(2).map { $0 }, [51, 20],
+                           "the stock parameters must be written, or macOS cannot re-arm it")
+        }
+    }
+
+    /// A missing entry means macOS's built-in default is live, so we do not
+    /// hold the shortcut — the opposite of what an absent key naively suggests.
+    func testAMissingEntryMeansMacOSStillHoldsTheShortcut() {
+        let store = FakeSymbolicHotkeyStore(entries: [:])
+        let controller = makeController(store: store)
+        XCTAssertFalse(controller.holdsShortcuts)
+    }
+
+    /// Disabling gives back a working shortcut even though there was no entry
+    /// to restore: writing the stock default is what re-arms macOS.
+    func testDisablingRestoresAShortcutThatHadNoEntryToBeginWith() {
+        let store = FakeSymbolicHotkeyStore(entries: [:])
+        let controller = makeController(store: store)
+        controller.enable()
+        controller.disable()
+
+        let entry = store.entries[SymbolicHotkeyPlist.screenshotToDestination]
+        XCTAssertNotNil(entry)
+        XCTAssertTrue(SymbolicHotkeyPlist.isEnabled(entry!))
+    }
+
     // MARK: - Disabling
 
     func testDisablingRestoresTheOriginalEntriesVerbatim() {

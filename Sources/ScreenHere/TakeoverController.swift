@@ -43,7 +43,9 @@ final class TakeoverController {
     /// shortcut re-enabled behind our back is visible instead of silent.
     var holdsShortcuts: Bool {
         Self.managedHotkeys.allSatisfy { id in
-            guard let entry = store.entry(id) else { return true }
+            // An absent entry is macOS's default, which is enabled — so we do
+            // NOT hold the shortcut, however tempting the opposite reading is.
+            guard let entry = store.entry(id) else { return false }
             return !SymbolicHotkeyPlist.isEnabled(entry)
         }
     }
@@ -74,7 +76,11 @@ final class TakeoverController {
         guard !isOn else { return }   // never re-snapshot an already-disabled entry
 
         for id in Self.managedHotkeys {
-            guard let entry = store.entry(id) else { continue }
+            // No entry means macOS is applying its built-in default, not that
+            // there is nothing to do: write the stock definition disabled, or
+            // the system keeps the shortcut and fires alongside us.
+            guard let entry = store.entry(id) ?? SymbolicHotkeyPlist.stockEntry(for: id)
+            else { continue }
             // Only snapshot an entry we have not already replaced, so a stale
             // "on" flag can never overwrite the real original with a disabled one.
             if SymbolicHotkeyPlist.isEnabled(entry) {

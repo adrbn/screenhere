@@ -30,6 +30,26 @@ enum SymbolicHotkeyPlist {
         }
     }
 
+    /// macOS only writes an entry once the user customises that shortcut. On a
+    /// stock Mac there is no entry at all and the built-in default applies — so
+    /// "absent" means "enabled", and taking the shortcut over means writing the
+    /// stock definition ourselves rather than skipping it.
+    ///
+    /// 51 is ASCII "3", 20 is kVK_ANSI_3, and the masks are shift+command and
+    /// control+shift+command in Cocoa's bit layout.
+    static func stockEntry(for id: Int) -> [String: Any]? {
+        let modifiers: Int
+        switch id {
+        case screenshotToDestination: modifiers = 1_179_648
+        case screenshotToClipboard: modifiers = 1_441_792
+        default: return nil
+        }
+        return [
+            "enabled": true,
+            "value": ["type": "standard", "parameters": [51, 20, modifiers]] as [String: Any],
+        ]
+    }
+
     static func isEnabled(_ entry: [String: Any]) -> Bool {
         (entry["enabled"] as? NSNumber)?.boolValue ?? false
     }
