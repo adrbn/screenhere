@@ -27,7 +27,7 @@ There is no new shortcut to learn. ScreenHere borrows the one you already use.
 <br/>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/panel-dark.png">
-  <img alt="The ScreenHere panel: a live map of two displays with the one under the pointer highlighted, the destination, and the controls" src="docs/assets/panel-light.png" width="330">
+  <img alt="The ScreenHere panel: a live map of two displays with the one under the pointer filled in, where captures are going, and the controls" src="docs/assets/panel-light.png" width="330">
 </picture>
 <br/><br/>
 </div>

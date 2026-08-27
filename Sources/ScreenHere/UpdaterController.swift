@@ -22,14 +22,20 @@ final class UpdaterController: NSObject, ObservableObject, SPUUpdaterDelegate {
     @Published private(set) var canCheckForUpdates = false
     @Published private(set) var availableVersion: String?
 
-    private var controller: SPUStandardUpdaterController!
+    private var controller: SPUStandardUpdaterController?
+
+    /// Sparkle needs a real app bundle: a bare executable has no identity to
+    /// compare against and no installer to hand over to, and it says so with a
+    /// modal alert. `swift run` and the documentation harness both hit that.
+    private static var canRun: Bool { Bundle.main.bundleIdentifier != nil }
 
     override init() {
         super.init()
+        guard Self.canRun else { return }
         controller = SPUStandardUpdaterController(startingUpdater: true,
                                                   updaterDelegate: self,
                                                   userDriverDelegate: self)
-        controller.updater.publisher(for: \.canCheckForUpdates)
+        controller?.updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)
 
         // One silent check shortly after launch so the panel can show a badge,
@@ -41,13 +47,14 @@ final class UpdaterController: NSObject, ObservableObject, SPUUpdaterDelegate {
 
     /// Ask the feed without showing anything.
     func checkQuietly() {
-        guard canCheckForUpdates else { return }
+        guard let controller, canCheckForUpdates else { return }
         controller.updater.checkForUpdateInformation()
     }
 
     /// Manual check — shows Sparkle's UI even when already up to date, and is
     /// how an offered update actually gets installed.
     func checkForUpdates() {
+        guard let controller else { return }
         comeToFront()
         controller.updater.checkForUpdates()
     }

@@ -33,6 +33,10 @@ final class PanelModel: ObservableObject {
     /// previews and the documentation shots, empty in the running app.
     var posedNames: [CGDirectDisplayID: String] = [:]
 
+    /// Overrides the permission and takeover state for documentation shots,
+    /// which run outside an app bundle and therefore hold neither.
+    var posedState: (permission: Bool, isOn: Bool)?
+
     init(takeover: TakeoverController) {
         self.takeover = takeover
         refresh()
@@ -86,12 +90,17 @@ final class PanelModel: ObservableObject {
         }
 
         self.pointer = pointer
+        // captureIndex speaks screencapture's language, where displays are
+        // numbered from one. The map indexes an array.
         activeDisplayIndex = CursorDisplay.captureIndex(
-            for: pointer, in: displays, mainDisplayID: CGMainDisplayID())
+            for: pointer, in: displays, mainDisplayID: CGMainDisplayID()) - 1
         let activeID = displays.indices.contains(activeDisplayIndex)
             ? displays[activeDisplayIndex].id : nil
-        activeDisplayName = CursorDisplay.displayName(at: pointer)
-            ?? activeID.flatMap { posedNames[$0] }
+        // Posed names win when they exist, so a documentation shot or a test is
+        // not overruled by whatever real screen happens to sit under the point.
+        // The map is empty in the running app, so this changes nothing there.
+        activeDisplayName = activeID.flatMap { posedNames[$0] }
+            ?? CursorDisplay.displayName(at: pointer)
             ?? "unknown display"
     }
 
@@ -102,11 +111,12 @@ final class PanelModel: ObservableObject {
     /// and drove the window server to 50%.
     func refreshEnvironment() {
         destination = ScreenshotSettings.current
-        hasPermission = CaptureRunner.hasScreenRecordingPermission
-        isOn = takeover.isOn
+        hasPermission = posedState?.permission ?? CaptureRunner.hasScreenRecordingPermission
+        isOn = posedState?.isOn ?? takeover.isOn
         launchesAtLogin = LoginItem.isEnabled
         showsOwnPreview = PreviewCoordinator.isEnabled
-        systemStillHandlesShortcut = takeover.isOn && !takeover.holdsShortcuts
+        systemStillHandlesShortcut = posedState == nil
+            && takeover.isOn && !takeover.holdsShortcuts
     }
 
     // MARK: - Actions
