@@ -42,8 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if PreviewCoordinator.isEnabled { CaptureWatcher.shared.start() }
 
-        offerLaunchAtLoginIfNeeded()
-        offerCapturePreviewIfNeeded()
+        greetIfNeeded()
     }
 
     /// Posted by a second launch to ask the running instance to reveal a
@@ -82,64 +81,77 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemThumbnail.restore()
     }
 
-    /// Asked once, the first time ScreenHere runs. Declining is remembered, and
-    /// the panel's switch stays available either way.
-    private func offerLaunchAtLoginIfNeeded() {
-        guard LoginItem.shouldOffer(hasOffered: LoginItem.hasOffered,
-                                    isAlreadyEnabled: LoginItem.isEnabled) else { return }
-        LoginItem.hasOffered = true
+    /// Asked once, together. Both of these used to be separate modal alerts
+    /// fired back to back, which is a lot of interruption for a utility whose
+    /// point is staying out of the way — and leaving them switched off in the
+    /// panel instead is exactly how the capture preview went unnoticed by the
+    /// person who wanted it.
+    private func greetIfNeeded() {
+        let offeredLogin = LoginItem.hasOffered
+        let offeredPreview = PreviewOffer.hasOffered
+        guard FirstRun.shouldGreet(offeredLogin: offeredLogin,
+                                   offeredPreview: offeredPreview,
+                                   loginIsOn: LoginItem.isEnabled,
+                                   previewIsOn: PreviewCoordinator.isEnabled) else { return }
+
+        let login = NSButton(checkboxWithTitle: "Launch ScreenHere at login", target: nil, action: nil)
+        login.state = FirstRun.defaultLoginChoice ? .on : .off
+        login.toolTip = "Without this, ⇧⌘3 does nothing at all after a restart "
+            + "until you open ScreenHere again."
+
+        let preview = NSButton(checkboxWithTitle: "Show the capture preview on the screen you captured",
+                               target: nil, action: nil)
+        preview.state = FirstRun.defaultPreviewChoice ? .on : .off
+        preview.toolTip = "Replaces macOS's own preview, which appears on whichever "
+            + "display it chooses. Switching it off puts yours back."
+
+        let stack = NSStackView(views: [login, preview])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 8
+        stack.frame = NSRect(x: 0, y: 0, width: 380, height: 46)
+
+        // An .accessory app owns no Dock tile and is never frontmost on its own,
+        // so a modal it puts up opens *behind* everything — the first attempt
+        // at this greeting recorded itself as answered without ever being seen.
+        // Promote for the duration, exactly as the updater does for Sparkle's
+        // window, then drop back to being invisible.
+        let policy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        defer { NSApp.setActivationPolicy(policy) }
 
         let alert = NSAlert()
-        alert.messageText = "Launch ScreenHere at login?"
+        alert.messageText = "ScreenHere is running"
         alert.informativeText = """
-            ScreenHere only works while it is running. If it does not start with \
-            your Mac, ⇧⌘3 will do nothing at all after a restart until you open \
-            ScreenHere again.
+            ⇧⌘3 now captures the screen your pointer is on. Nothing else changes: \
+            your screenshots go where they always did.
 
-            You can change this any time from the panel.
+            Two things you can turn on, and change any time from the menu:
             """
-        alert.addButton(withTitle: "Launch at Login")
-        alert.addButton(withTitle: "Not Now")
-        NSApp.activate(ignoringOtherApps: true)
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        alert.accessoryView = stack
+        alert.addButton(withTitle: "Continue")
+        alert.runModal()
 
-        do {
-            try LoginItem.setEnabled(true)
-        } catch {
-            let failure = NSAlert()
-            failure.messageText = "Couldn't enable Launch at Login"
-            failure.informativeText = error.localizedDescription
-            failure.runModal()
-        }
-    }
-
-    /// Asked once. macOS puts its capture preview wherever it likes, which on a
-    /// multi-display Mac is rarely the screen you just captured — and it offers
-    /// no setting for that. Ours can go on the right screen, but only by turning
-    /// macOS's off, so the choice is the user's to make rather than ours to
-    /// assume.
-    private func offerCapturePreviewIfNeeded() {
-        guard PreviewOffer.shouldOffer(hasOffered: PreviewOffer.hasOffered,
-                                       isAlreadyOn: PreviewCoordinator.isEnabled) else { return }
+        // Recorded only once it has actually been answered, so a greeting that
+        // fails to appear is not silently spent.
+        LoginItem.hasOffered = true
         PreviewOffer.hasOffered = true
 
-        let alert = NSAlert()
-        alert.messageText = "Show the capture preview on the screen you captured?"
-        alert.informativeText = """
-            After a screenshot, macOS shows a small preview — on whichever display \
-            it chooses, which is rarely the one you were looking at. ScreenHere can \
-            show it in the corner of the screen the capture came from instead.
-
-            This replaces macOS's preview with ScreenHere's, and switching it off \
-            in the panel puts yours back exactly as it was.
-            """
-        alert.addButton(withTitle: "Show It There")
-        alert.addButton(withTitle: "Not Now")
-        NSApp.activate(ignoringOtherApps: true)
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-
-        UserDefaults.standard.set(true, forKey: PreviewPrefs.enabledKey)
-        SystemThumbnail.suppress()
+        if login.state == .on, !LoginItem.isEnabled {
+            do {
+                try LoginItem.setEnabled(true)
+            } catch {
+                let failure = NSAlert()
+                failure.messageText = "Couldn't enable Launch at Login"
+                failure.informativeText = error.localizedDescription
+                failure.runModal()
+            }
+        }
+        if preview.state == .on {
+            UserDefaults.standard.set(true, forKey: PreviewPrefs.enabledKey)
+            SystemThumbnail.suppress()
+        }
     }
 
     /// Hand ⇧⌘3 back to macOS on the way out.
