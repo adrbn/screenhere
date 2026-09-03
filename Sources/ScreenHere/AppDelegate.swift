@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if PreviewCoordinator.isEnabled { CaptureWatcher.shared.start() }
 
         offerLaunchAtLoginIfNeeded()
+        offerCapturePreviewIfNeeded()
     }
 
     /// Posted by a second launch to ask the running instance to reveal a
@@ -110,6 +111,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             failure.informativeText = error.localizedDescription
             failure.runModal()
         }
+    }
+
+    /// Asked once. macOS puts its capture preview wherever it likes, which on a
+    /// multi-display Mac is rarely the screen you just captured — and it offers
+    /// no setting for that. Ours can go on the right screen, but only by turning
+    /// macOS's off, so the choice is the user's to make rather than ours to
+    /// assume.
+    private func offerCapturePreviewIfNeeded() {
+        guard PreviewOffer.shouldOffer(hasOffered: PreviewOffer.hasOffered,
+                                       isAlreadyOn: PreviewCoordinator.isEnabled) else { return }
+        PreviewOffer.hasOffered = true
+
+        let alert = NSAlert()
+        alert.messageText = "Show the capture preview on the screen you captured?"
+        alert.informativeText = """
+            After a screenshot, macOS shows a small preview — on whichever display \
+            it chooses, which is rarely the one you were looking at. ScreenHere can \
+            show it in the corner of the screen the capture came from instead.
+
+            This replaces macOS's preview with ScreenHere's, and switching it off \
+            in the panel puts yours back exactly as it was.
+            """
+        alert.addButton(withTitle: "Show It There")
+        alert.addButton(withTitle: "Not Now")
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        UserDefaults.standard.set(true, forKey: PreviewPrefs.enabledKey)
+        SystemThumbnail.suppress()
     }
 
     /// Hand ⇧⌘3 back to macOS on the way out.

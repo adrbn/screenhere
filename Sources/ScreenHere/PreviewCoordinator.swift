@@ -54,4 +54,19 @@ enum PreviewCoordinator {
 
 enum PreviewPrefs {
     static let enabledKey = "ShowPreviewOnCapturedScreen"
+    static let offeredKey = "DidOfferCapturePreview"
+}
+
+/// Whether to make the one-time offer to move the capture preview onto the
+/// screen it came from.
+enum PreviewOffer {
+    /// Pure. Offered once, and never when the user already switched it on.
+    static func shouldOffer(hasOffered: Bool, isAlreadyOn: Bool) -> Bool {
+        !hasOffered && !isAlreadyOn
+    }
+
+    static var hasOffered: Bool {
+        get { UserDefaults.standard.bool(forKey: PreviewPrefs.offeredKey) }
+        set { UserDefaults.standard.set(newValue, forKey: PreviewPrefs.offeredKey) }
+    }
 }
