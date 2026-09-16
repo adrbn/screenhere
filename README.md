@@ -55,6 +55,8 @@ ScreenHere disables the macOS symbolic hotkeys for <kbd>⇧</kbd><kbd>⌘</kbd><
 - ↩️ **Always reversible** — one row in the panel hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> straight back to macOS, and the app restores it on quit, on shutdown, on toggle-off, and even after a crash.
 - 🔒 **Private by design** — it never touches your pixels. It resolves a display index and hands the job to Apple's own `screencapture`.
 - 🖼️ **The preview lands where you were looking** — optional: ScreenHere can draw the post-capture preview in the corner of the screen it came from, which macOS offers no way to do. Click it to reveal the file, drag it straight into a message. Off by default, because switching it on turns macOS's own preview off — and switching it back restores your setting exactly as it was.
+- 🔤 **<kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> copies the text on screen** — select any area and its text lands on your clipboard, read on your Mac by Apple's Vision. Nothing leaves the machine.
+- 📋 **<kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> brings back what you copied** — optional: the last 200 texts and pictures you copied, in a list under the pointer. Type to filter, <kbd>Return</kbd> to copy it again.
 - 🔄 **Updates itself** — signed releases install in place through Sparkle, and the shortcut is handed back to macOS across the relaunch so the swap never leaves a dead key.
 - ⚡ **Native Swift**, one dependency (Sparkle), macOS 13 Ventura and later (including macOS 27).
 
@@ -120,6 +122,20 @@ It covers **every** capture, not only the ones ScreenHere handles: <kbd>⇧</kbd
 
 > This is the one place ScreenHere changes a macOS setting, and it is the reason the option is off by default. Turning it on remembers your `show-thumbnail` value and disables macOS's preview so you do not get two; turning it off, quitting, or shutting down puts your value back — including the common case where the key was never set at all, which is restored by removing it rather than writing `true`.
 
+### Copy text from the screen
+
+Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd>, drag over the text you want — macOS's own crosshair, so <kbd>Space</kbd> picks a window and <kbd>Esc</kbd> cancels — and the text is on your clipboard, with a short confirmation at the top of the screen. It is on by default and switches off from the panel.
+
+macOS assigns <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> to *Save picture of the Touch Bar*, entry **181**, so ScreenHere borrows it exactly as it borrows <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> and hands it back the same ways. If another app also uses the combination — TextSniper does — macOS gives the key to whichever app registered first, and ScreenHere cannot always tell: switch it off in the other app.
+
+Recognition runs on device with Vision's accurate engine, in a small reader process that stays loaded while the shortcut is on — about 20–50 MB and no CPU at rest. That is deliberate: loading Vision's models in a fresh process can cost a Neural Engine compile of a minute or more on macOS 27, and a reader that stays up pays it once. If the reader is not ready, the fast engine answers instead, instantly but with more misreads. Keyboard symbols such as <kbd>⌘</kbd> and <kbd>⇧</kbd> are not in Vision's alphabet and come out garbled.
+
+### Clipboard history
+
+Switch on **Clipboard History** in the panel, then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> anywhere: a list of the last 200 texts and pictures you copied (up to 100 MB of pictures) opens under the pointer, without taking focus from the app you are in. Type to filter, use the arrows to choose, <kbd>Return</kbd> to copy, <kbd>Esc</kbd> to close — then <kbd>⌘</kbd><kbd>V</kbd> as usual. **Clear History** empties it, from the panel or the list.
+
+The history stays on your Mac, in `~/Library/Application Support/ScreenHere`, readable by your account only. Copies that password managers mark as concealed are never recorded. On macOS 15.4 and later, macOS asks before an app reads the clipboard in the background: choose **Always Allow**. Until it is allowed, the panel shows **Allow Clipboard Access…**, which opens the setting.
+
 ## Uninstall
 
 1. Open the panel and click **Restore macOS Shortcuts**. This is the step that matters — it hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> back to macOS.
@@ -127,7 +143,7 @@ It covers **every** capture, not only the ones ScreenHere handles: <kbd>⇧</kbd
 
 If you deleted the app without step 1, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> will do nothing at all. The Terminal command under [Giving the shortcut back](#giving-the-shortcut-back) restores it.
 
-ScreenHere stores nothing beyond a few preferences: `defaults delete com.screenhere.app` removes them, including Sparkle's update schedule.
+ScreenHere stores a few preferences and, if you switched it on, the clipboard history: `defaults delete com.screenhere.app` removes the preferences, including Sparkle's update schedule, and `rm -rf ~/Library/Application\ Support/ScreenHere` removes the history.
 
 ## Build from source
 
@@ -153,6 +169,7 @@ The app icon is generated from `scripts/make-icon.swift`.
 - [x] Notarized, so downloads open without a Gatekeeper detour
 - [x] In-app updates through Sparkle
 - [x] Capture preview on the screen it came from
+- [x] <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> text from the screen, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> clipboard history
 - [ ] Optionally scope <kbd>⇧</kbd><kbd>⌘</kbd><kbd>4</kbd>'s crosshair to the pointer's display
 - [ ] Homebrew cask
 
