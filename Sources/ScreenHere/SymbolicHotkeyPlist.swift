@@ -15,6 +15,9 @@ enum SymbolicHotkeyPlist {
     static let screenshotToDestination = 28
     /// "Copy picture of screen to the clipboard" — ⌃⇧⌘3.
     static let screenshotToClipboard = 29
+    /// "Save picture of the Touch Bar as a file" — ⇧⌘7, which ScreenHere
+    /// borrows for copying text. Its ⌃⇧⌘7 sibling, 182, is left alone.
+    static let touchBarToFile = 181
 
     enum Failure: Error, LocalizedError {
         case notAPropertyList
@@ -37,17 +40,24 @@ enum SymbolicHotkeyPlist {
     ///
     /// 51 is ASCII "3", 20 is kVK_ANSI_3, and the masks are shift+command and
     /// control+shift+command in Cocoa's bit layout.
+    /// 55 is ASCII "7" and 26 kVK_ANSI_7, as in macOS's DefaultShortcutsTable.
     static func stockEntry(for id: Int) -> [String: Any]? {
-        let modifiers: Int
+        let parameters: [Int]
         switch id {
-        case screenshotToDestination: modifiers = 1_179_648
-        case screenshotToClipboard: modifiers = 1_441_792
+        case screenshotToDestination: parameters = [51, 20, 1_179_648]
+        case screenshotToClipboard: parameters = [51, 20, 1_441_792]
+        case touchBarToFile: parameters = [55, 26, 1_179_648]
         default: return nil
         }
         return [
             "enabled": true,
-            "value": ["type": "standard", "parameters": [51, 20, modifiers]] as [String: Any],
+            "value": ["type": "standard", "parameters": parameters] as [String: Any],
         ]
+    }
+
+    /// `[charCode, keyCode, modifierMask]`, or nil for a malformed entry.
+    static func parameters(of entry: [String: Any]) -> [Int]? {
+        (entry["value"] as? [String: Any])?["parameters"] as? [Int]
     }
 
     static func isEnabled(_ entry: [String: Any]) -> Bool {

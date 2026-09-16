@@ -24,8 +24,22 @@ final class HotkeyRegistrarTests: XCTestCase {
     }
 
     func testCombosHaveDistinctIdentifiers() {
-        XCTAssertNotEqual(HotkeyCombo.screenshotToDestination.id,
-                          HotkeyCombo.screenshotToClipboard.id)
+        let ids = [HotkeyCombo.screenshotToDestination, .screenshotToClipboard,
+                   .copyText, .clipboardHistory].map(\.id)
+        XCTAssertEqual(Set(ids).count, ids.count)
+    }
+
+    /// Physical key positions, so ⇧⌘7 is the same key on AZERTY and QWERTY.
+    func testTextShortcutsAreShiftCommandSevenAndEight() {
+        XCTAssertEqual(HotkeyCombo.copyText.keyCode, UInt32(kVK_ANSI_7))
+        XCTAssertEqual(HotkeyCombo.clipboardHistory.keyCode, UInt32(kVK_ANSI_8))
+        XCTAssertEqual(HotkeyCombo.copyText.cocoaModifierMask, 1_179_648)
+        XCTAssertEqual(HotkeyCombo.clipboardHistory.cocoaModifierMask, 1_179_648)
+    }
+
+    /// Two registrars share one event target; each must only claim its own.
+    func testRegistrarsForDifferentFeaturesUseDifferentSignatures() {
+        XCTAssertNotEqual(HotkeyRegistrar.takeoverSignature, HotkeyRegistrar.textSignature)
     }
 
     func testCarbonModifiersAreTheCarbonConstants() {

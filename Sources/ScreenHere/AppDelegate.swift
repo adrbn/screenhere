@@ -42,6 +42,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if PreviewCoordinator.isEnabled { CaptureWatcher.shared.start() }
 
+        ClipboardController.shared.activate()
+        TextShortcuts.shared.activate()
+
         greetIfNeeded()
     }
 
@@ -79,6 +82,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         log("System is powering off — restoring the macOS shortcuts.")
         takeover.disable()
         SystemThumbnail.restore()
+        // Workspace notifications are posted on the main thread.
+        MainActor.assumeIsolated {
+            TextShortcuts.shared.releaseSystemShortcuts()
+            ClipboardController.shared.flush()
+        }
     }
 
     /// Asked once, together. Both of these used to be separate modal alerts
@@ -162,6 +170,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // The capture preview is a change to the user's own settings; it goes
         // back whenever ScreenHere is not running to justify it.
         SystemThumbnail.restore()
+        // Workspace notifications are posted on the main thread.
+        MainActor.assumeIsolated {
+            TextShortcuts.shared.releaseSystemShortcuts()
+            ClipboardController.shared.flush()
+        }
     }
 
     private func anotherInstanceIsRunning() -> Bool {

@@ -17,6 +17,15 @@ struct HotkeyCombo: Equatable {
     static let screenshotToClipboard = HotkeyCombo(
         id: 2, keyCode: UInt32(kVK_ANSI_3), carbonModifiers: UInt32(shiftKey | cmdKey | controlKey))
 
+    /// ⇧⌘7 — select a region and copy the text in it. macOS assigns nothing
+    /// to it, so there is no system entry to take over.
+    static let copyText = HotkeyCombo(
+        id: 3, keyCode: UInt32(kVK_ANSI_7), carbonModifiers: UInt32(shiftKey | cmdKey))
+
+    /// ⇧⌘8 — open the clipboard history. Also unassigned by macOS.
+    static let clipboardHistory = HotkeyCombo(
+        id: 4, keyCode: UInt32(kVK_ANSI_8), carbonModifiers: UInt32(shiftKey | cmdKey))
+
     /// The same modifiers in the Cocoa bit layout macOS stores in
     /// `AppleSymbolicHotKeys ▸ value ▸ parameters[2]`.
     var cocoaModifierMask: Int {
@@ -42,9 +51,24 @@ protocol HotkeyBinding: AnyObject {
 /// observe without consuming, and over a `CGEventTap` because taps need
 /// Accessibility permission and get disarmed by the input watchdog.
 final class HotkeyRegistrar: HotkeyBinding {
-    fileprivate static let signature: OSType = 0x53_43_52_48   // 'SCRH'
+    /// 'SCRH' — the screenshot takeover.
+    static let takeoverSignature: OSType = 0x53_43_52_48
+    /// 'SCRT' — the text and clipboard shortcuts.
+    static let textSignature: OSType = 0x53_43_52_54
+
+    /// Each registrar installs its own handler, and a handler that recognises
+    /// an event consumes it. Distinct signatures keep one registrar from
+    /// swallowing the other's key presses.
+    fileprivate let signature: OSType
+
+    init(signature: OSType = HotkeyRegistrar.takeoverSignature) {
+        self.signature = signature
+    }
 
     private var references: [EventHotKeyRef] = []
+    /// Checked alongside the signature, so two registrars for the same
+    /// feature can coexist and bind or fail independently.
+    fileprivate private(set) var boundIDs: Set<UInt32> = []
     private var handler: EventHandlerRef?
     private var onFire: ((UInt32) -> Void)?
 
@@ -55,7 +79,7 @@ final class HotkeyRegistrar: HotkeyBinding {
 
         for combo in combos {
             var reference: EventHotKeyRef?
-            let hotKeyID = EventHotKeyID(signature: Self.signature, id: combo.id)
+            let hotKeyID = EventHotKeyID(signature: signature, id: combo.id)
             let status = RegisterEventHotKey(
                 combo.keyCode, combo.carbonModifiers, hotKeyID, GetEventDispatcherTarget(), 0,
                 &reference)
@@ -64,6 +88,7 @@ final class HotkeyRegistrar: HotkeyBinding {
                 return false
             }
             references.append(reference)
+            boundIDs.insert(combo.id)
         }
         return true
     }
@@ -71,6 +96,7 @@ final class HotkeyRegistrar: HotkeyBinding {
     func unbindAll() {
         for reference in references { UnregisterEventHotKey(reference) }
         references.removeAll()
+        boundIDs.removeAll()
     }
 
     fileprivate func fire(_ id: UInt32) {
@@ -89,10 +115,11 @@ final class HotkeyRegistrar: HotkeyBinding {
                 let status = GetEventParameter(
                     event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
                     nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
-                guard status == noErr, hotKeyID.signature == HotkeyRegistrar.signature else {
+                let registrar = Unmanaged<HotkeyRegistrar>.fromOpaque(context).takeUnretainedValue()
+                guard status == noErr, hotKeyID.signature == registrar.signature,
+                      registrar.boundIDs.contains(hotKeyID.id) else {
                     return OSStatus(eventNotHandledErr)
                 }
-                let registrar = Unmanaged<HotkeyRegistrar>.fromOpaque(context).takeUnretainedValue()
                 registrar.fire(hotKeyID.id)
                 return noErr
             },

@@ -38,7 +38,7 @@ enum PreviewCoordinator {
         return displays[index - 1].id
     }
 
-    private static func screenUnderPointer() -> NSScreen? {
+    static func screenUnderPointer() -> NSScreen? {
         let point = CursorDisplay.cursorLocation()
         let displays = CursorDisplay.activeDisplays()
         guard let id = displayID(forCaptureIndex:

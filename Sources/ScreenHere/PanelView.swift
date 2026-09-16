@@ -28,6 +28,8 @@ struct PanelView: View {
             separator
             controls
             separator
+            TextSection(shortcuts: .shared, clipboard: .shared)
+            separator
             about
         }
         .frame(width: 300)
@@ -180,14 +182,14 @@ struct PanelView: View {
 
 // MARK: - Pieces
 
-private enum Theme {
+enum Theme {
     /// The app's violet, the same one the icon is drawn in — so the panel reads
     /// as ScreenHere rather than as a generic system sheet.
     static let brand = Color(red: 0.49, green: 0.31, blue: 0.94)
     static let warning = Color(red: 0.85, green: 0.45, blue: 0.05)
 }
 
-private struct ShortcutChip: View {
+struct ShortcutChip: View {
     let keys: String
 
     var body: some View {
@@ -206,7 +208,7 @@ private struct ShortcutChip: View {
 /// One row of the panel: fixed icon column, title, optional trailing control or
 /// hint. Rows with an action highlight on hover; rows that only host a control
 /// do not, because there is nothing to click in the row itself.
-private struct PanelRow<Trailing: View>: View {
+struct PanelRow<Trailing: View>: View {
     let icon: String
     let title: String
     var trailingText: String?

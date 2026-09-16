@@ -89,7 +89,10 @@ final class UpdaterController: NSObject, ObservableObject, SPUUpdaterDelegate {
     nonisolated func updater(_ updater: SPUUpdater,
                              willInstallUpdateOnQuit item: SUAppcastItem,
                              immediateInstallationBlock: @escaping () -> Void) -> Bool {
-        Task { @MainActor in TakeoverController.shared.disable() }
+        Task { @MainActor in
+            TakeoverController.shared.disable()
+            TextShortcuts.shared.releaseSystemShortcuts()
+        }
         return false
     }
 

@@ -1,6 +1,6 @@
 import SwiftUI
 
-@main
+/// Started by `Entry`, unless this process is the text reader service.
 struct ScreenHereApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     /// Not a @StateObject: observed here, every pointer tick would rebuild the
