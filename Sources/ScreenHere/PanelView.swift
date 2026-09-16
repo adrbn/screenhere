@@ -31,8 +31,7 @@ struct PanelView: View {
             about
         }
         .frame(width: 300)
-        .onAppear { model.startPolling() }
-        .onDisappear { model.stopPolling() }
+        .background(WindowReader { model.attach(window: $0) })
     }
 
     private var separator: some View {

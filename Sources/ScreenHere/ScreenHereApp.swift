@@ -3,7 +3,9 @@ import SwiftUI
 @main
 struct ScreenHereApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var model = PanelModel(takeover: .shared)
+    /// Not a @StateObject: observed here, every pointer tick would rebuild the
+    /// scene and the menu-bar label with it. Only PanelView observes it.
+    private let model = PanelModel.shared
 
     /// Persisted so a hidden icon stays hidden across launches. Reopening the
     /// app from /Applications clears it — that is the way back.
@@ -29,7 +31,7 @@ struct ScreenHereApp: App {
                 onOpenGitHub: { NSWorkspace.shared.open(UpdaterController.repositoryURL) },
                 onQuit: { NSApp.terminate(nil) })
         } label: {
-            Image(nsImage: MenuBarIcon.statusImage())
+            Image(nsImage: MenuBarIcon.status)
         }
         .menuBarExtraStyle(.window)
     }

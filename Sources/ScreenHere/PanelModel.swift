@@ -22,6 +22,23 @@ final class PanelModel: ObservableObject {
 
     private let takeover: TakeoverController
     private var timer: Timer?
+    private var occlusionObserver: NSObjectProtocol?
+
+    /// The one model the running app uses. Held outside the `App` struct on
+    /// purpose: as a `@StateObject` there, every pointer tick re-evaluated the
+    /// scene, rebuilt the menu-bar label, and made AppKit re-snapshot the
+    /// status item ten times a second.
+    static let shared = PanelModel(takeover: .shared)
+
+    /// The window MenuBarExtra hosts the panel in, reported by the view itself.
+    private(set) weak var panelWindow: NSWindow?
+
+    /// Whether the panel is actually on screen. Injectable for tests; the app
+    /// asks the panel's own window — never "any window of the app", because
+    /// the status item's window is always visible and that guard never fired.
+    var isPanelOnScreen: () -> Bool = { false }
+
+    var isPolling: Bool { timer != nil }
 
     /// Where the live state is sampled from. Injectable so previews and the
     /// documentation shots can pose a fixed arrangement without a second
@@ -44,16 +61,39 @@ final class PanelModel: ObservableObject {
 
     var status: TakeoverController.Status { takeover.status }
 
+    /// Called by the panel once it knows its window. From then on the window's
+    /// occlusion state drives polling: it starts when the panel is ordered in
+    /// and stops when it is ordered out, whatever SwiftUI's lifecycle does.
+    func attach(window: NSWindow) {
+        guard window !== panelWindow else { return }
+        if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
+        panelWindow = window
+        isPanelOnScreen = { [weak window] in
+            guard let window else { return false }
+            return window.isVisible && window.occlusionState.contains(.visible)
+        }
+        occlusionObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            if self.isPanelOnScreen() {
+                if !self.isPolling { self.startPolling() }
+            } else {
+                self.stopPolling()
+            }
+        }
+        if isPanelOnScreen() && !isPolling { startPolling() }
+    }
+
     func startPolling() {
         refreshEnvironment()
         refresh()
         timer?.invalidate()
         let timer = Timer(timeInterval: 1.0 / 10.0, repeats: true) { [weak self] _ in
             guard let self else { return }
-            // SwiftUI does not call onDisappear for MenuBarExtra content, so the
-            // timer outlived every close and polled forever. An agent with no
-            // visible window has no panel on screen and nothing to refresh.
-            guard NSApp.windows.contains(where: \.isVisible) else {
+            // SwiftUI calls neither onDisappear for MenuBarExtra content nor
+            // anything else on close, so the timer checks for itself.
+            guard self.isPanelOnScreen() else {
                 self.stopPolling()
                 return
             }
@@ -89,19 +129,22 @@ final class PanelModel: ObservableObject {
             self.displays = displays
         }
 
-        self.pointer = pointer
+        // @Published fires on every assignment, equal or not, and each fire
+        // re-renders the panel. Only a real change is worth that.
+        if self.pointer != pointer { self.pointer = pointer }
         // captureIndex speaks screencapture's language, where displays are
         // numbered from one. The map indexes an array.
-        activeDisplayIndex = CursorDisplay.captureIndex(
+        let index = CursorDisplay.captureIndex(
             for: pointer, in: displays, mainDisplayID: CGMainDisplayID()) - 1
-        let activeID = displays.indices.contains(activeDisplayIndex)
-            ? displays[activeDisplayIndex].id : nil
+        if activeDisplayIndex != index { activeDisplayIndex = index }
+        let activeID = displays.indices.contains(index) ? displays[index].id : nil
         // Posed names win when they exist, so a documentation shot or a test is
         // not overruled by whatever real screen happens to sit under the point.
         // The map is empty in the running app, so this changes nothing there.
-        activeDisplayName = activeID.flatMap { posedNames[$0] }
+        let name = activeID.flatMap { posedNames[$0] }
             ?? CursorDisplay.displayName(at: pointer)
             ?? "unknown display"
+        if activeDisplayName != name { activeDisplayName = name }
     }
 
     /// Expensive sampling — an XPC round trip for the login item, a TCC query

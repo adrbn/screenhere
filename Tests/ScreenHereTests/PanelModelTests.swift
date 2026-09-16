@@ -54,4 +54,41 @@ final class PanelModelTests: XCTestCase {
                           "index \(m.activeDisplayIndex) out of range for \(point)")
         }
     }
+
+    // MARK: - Polling only while the panel is on screen
+
+    private func spinRunLoop(for seconds: TimeInterval) {
+        RunLoop.main.run(until: Date().addingTimeInterval(seconds))
+    }
+
+    /// The leak that cost a third of a core for days: the old guard asked
+    /// whether *any* window of the app was visible, and the status item's own
+    /// window always is, so the timer never stopped after the panel closed.
+    func testPollingStopsOnceThePanelIsOffScreen() {
+        let m = model(pointer: CGPoint(x: 100, y: 100), displays: [external, laptop])
+        m.isPanelOnScreen = { false }
+        m.startPolling()
+        spinRunLoop(for: 0.35)
+        XCTAssertFalse(m.isPolling)
+    }
+
+    func testPollingContinuesWhileThePanelIsOnScreen() {
+        let m = model(pointer: CGPoint(x: 100, y: 100), displays: [external, laptop])
+        m.isPanelOnScreen = { true }
+        m.startPolling()
+        spinRunLoop(for: 0.35)
+        XCTAssertTrue(m.isPolling)
+        m.stopPolling()
+    }
+
+    /// Every publish re-renders SwiftUI. A pointer at rest must cost nothing,
+    /// or ten ticks a second redraw the panel for no visible change.
+    func testAPointerAtRestPublishesNothing() {
+        let m = model(pointer: CGPoint(x: 100, y: 100), displays: [external, laptop])
+        var changes = 0
+        let subscription = m.objectWillChange.sink { changes += 1 }
+        for _ in 0..<10 { m.refresh() }
+        subscription.cancel()
+        XCTAssertEqual(changes, 0)
+    }
 }

@@ -9,6 +9,10 @@ import AppKit
 /// near one; at menu-bar size that collapsed into an unreadable checkerboard.
 enum MenuBarIcon {
 
+    /// Built once. A fresh NSImage per render makes AppKit re-snapshot the
+    /// status item even when nothing about it changed.
+    static let status: NSImage = statusImage()
+
     static func statusImage() -> NSImage {
         let size = NSSize(width: 18, height: 16)
         let image = NSImage(size: size, flipped: false) { _ in
