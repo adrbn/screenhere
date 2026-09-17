@@ -56,7 +56,7 @@ ScreenHere disables the macOS symbolic hotkeys for <kbd>⇧</kbd><kbd>⌘</kbd><
 - 🔒 **Private by design** — it never touches your pixels. It resolves a display index and hands the job to Apple's own `screencapture`.
 - 🖼️ **The preview lands where you were looking** — optional: ScreenHere can draw the post-capture preview in the corner of the screen it came from, which macOS offers no way to do. Click it to reveal the file, drag it straight into a message. Off by default, because switching it on turns macOS's own preview off — and switching it back restores your setting exactly as it was.
 - 🔤 **<kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> copies the text on screen** — select any area and its text lands on your clipboard, read on your Mac by Apple's Vision. Nothing leaves the machine.
-- 📋 **<kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> brings back what you copied** — optional: the last 200 texts and pictures you copied, in a list under the pointer. Type to filter, <kbd>Return</kbd> to copy it again.
+- 📋 **<kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> brings back what you copied** — optional: the last 200 texts and pictures you copied, in a list under the pointer. Type to filter, <kbd>Return</kbd> to copy it again. Links can show their page's title and icon (beta, off by default).
 - 🔄 **Updates itself** — signed releases install in place through Sparkle, and the shortcut is handed back to macOS across the relaunch so the swap never leaves a dead key.
 - ⚡ **Native Swift**, one dependency (Sparkle), macOS 13 Ventura and later (including macOS 27).
 
@@ -136,6 +136,10 @@ Switch on **Clipboard History** in the panel, then press <kbd>⇧</kbd><kbd>⌘<
 
 The history stays on your Mac, in `~/Library/Application Support/ScreenHere`, readable by your account only. Copies that password managers mark as concealed are never recorded. On macOS 15.4 and later, macOS asks before an app reads the clipboard in the background: choose **Always Allow**. Until it is allowed, the panel shows **Allow Clipboard Access…**, which opens the setting.
 
+**Link Previews** (beta, off by default) shows a copied link as its page's title and its site's icon. To get them, ScreenHere visits the link — when the list shows it, never when you copy it — the way a careful stranger would: no cookies, no saved passwords, tracking parameters left behind, the top megabyte of the page at most, and nothing at all on a Low Data Mode network. The site still sees a visit from your IP address, as it would if you opened the link. A firewall such as LuLu will ask about it the first time.
+
+A visit could spend a link that signs you in or resets a password, so ScreenHere never visits one that looks private or single-use: addresses on your own network (including names that point there, and redirects that lead there), links that are not https, links with a port or a password in them, links carrying a token, code, key, signature or long random identifier, and sign-in, reset, confirmation, invitation and unsubscribe addresses (login.example.com included). Those rows show a lock instead of an icon. No filter catches every such link, which is why previews are off until you turn them on. Previews are kept next to the history, leave with the links they belong to, and are all deleted when you turn the setting off or clear the history.
+
 ## Uninstall
 
 1. Open the panel and click **Restore macOS Shortcuts**. This is the step that matters — it hands <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> back to macOS.
@@ -170,6 +174,7 @@ The app icon is generated from `scripts/make-icon.swift`.
 - [x] In-app updates through Sparkle
 - [x] Capture preview on the screen it came from
 - [x] <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> text from the screen, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> clipboard history
+- [x] Link previews in the clipboard history (beta)
 - [ ] Optionally scope <kbd>⇧</kbd><kbd>⌘</kbd><kbd>4</kbd>'s crosshair to the pointer's display
 - [ ] Homebrew cask
 
