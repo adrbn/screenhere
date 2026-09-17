@@ -3,6 +3,7 @@ import AppKit
 enum TextPrefs {
     static let copyTextKey = "CopyTextShortcutEnabled"
     static let historyKey = "ClipboardHistoryEnabled"
+    static let linkPreviewsKey = "LinkPreviewsEnabled"
 }
 
 /// The clipboard history as the app sees it: whether it is on, what it holds,
@@ -118,6 +119,7 @@ final class ClipboardController: ObservableObject {
         history = .empty
         store.delete()
         thumbnails.removeAllObjects()
+        LinkPreviewController.shared.clear()
         let images = self.images
         imageQueue.async { images.deleteAll() }
     }
@@ -140,6 +142,7 @@ final class ClipboardController: ObservableObject {
         }
         let keep = history.imageDigests
         imageQueue.async { images.prune(keeping: keep) }
+        LinkPreviewController.shared.prune(keeping: history.links)
     }
 
     private func handle(_ copied: Copied, source: String?) {
@@ -162,9 +165,10 @@ final class ClipboardController: ObservableObject {
     }
 
     /// Publishes a new history, schedules its save, and deletes the pictures
-    /// it no longer holds.
+    /// and link previews it no longer holds.
     private func apply(_ next: ClipboardHistory) {
         let dropped = history.imageDigests.subtracting(next.imageDigests)
+        LinkPreviewController.shared.forget(history.links.subtracting(next.links), keeping: next.links)
         history = next
         scheduleSave()
         guard !dropped.isEmpty else { return }

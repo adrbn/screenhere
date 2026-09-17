@@ -4,6 +4,7 @@ import SwiftUI
 struct HistoryPickerView: View {
     @ObservedObject var model: HistoryPickerModel
     @ObservedObject var clipboard: ClipboardController
+    @ObservedObject var links: LinkPreviewController
 
     var body: some View {
         let results = model.results
@@ -56,13 +57,17 @@ struct HistoryPickerView: View {
             ScrollView {
                 LazyVStack(spacing: 2) {
                     ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
+                        let link = links.isEnabled ? item.text.flatMap(CopiedLink.init(text:)) : nil
                         HistoryRow(item: item,
                                    thumbnail: item.image.flatMap(clipboard.thumbnail(for:)),
+                                   link: link,
+                                   linkPreview: link.flatMap(links.preview(for:)),
                                    isSelected: index == model.selection,
                                    onChoose: { model.onChoose(item) },
                                    onRemove: { model.remove(item) })
                             .id(item.id)
                             .onHover { if $0 { model.selection = index } }
+                            .onAppear { if let link { links.want(link) } }
                     }
                 }
                 .padding(6)
@@ -166,21 +171,26 @@ private struct FooterButton: View {
 private struct HistoryRow: View {
     let item: ClipItem
     let thumbnail: NSImage?
+    /// Set only while link previews are on.
+    let link: CopiedLink?
+    let linkPreview: LinkPreviewController.Shown?
     let isSelected: Bool
     let onChoose: () -> Void
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(alignment: item.image == nil ? .top : .center, spacing: 10) {
+        HStack(alignment: item.image == nil && link == nil ? .top : .center, spacing: 10) {
             if item.image != nil {
                 Thumbnail(image: thumbnail)
+            } else if let link {
+                LinkTile(icon: linkPreview?.icon, visited: link.mayVisit, isSelected: isSelected)
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text(Self.title(item))
+                Text(title)
                     .font(.system(size: 13))
                     .lineLimit(2)
                     .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
-                Text(Self.subtitle(item))
+                Text(subtitle)
                     .font(.system(size: 10.5))
                     .foregroundStyle(isSelected ? AnyShapeStyle(.white.opacity(0.75))
                                                 : AnyShapeStyle(.secondary))
@@ -203,6 +213,19 @@ private struct HistoryRow: View {
             .fill(isSelected ? AnyShapeStyle(Theme.brand) : AnyShapeStyle(.clear)))
         .contentShape(Rectangle())
         .onTapGesture(perform: onChoose)
+    }
+
+    /// A link reads as its page's title once there is one, and as its address
+    /// without the scheme until then.
+    private var title: String {
+        guard let link else { return Self.title(item) }
+        return linkPreview?.title ?? link.display
+    }
+
+    /// Under a page title, the site it is on.
+    private var subtitle: String {
+        guard let link, linkPreview?.title != nil else { return Self.subtitle(item) }
+        return "\(link.host) · \(Self.subtitle(item))"
     }
 
     /// Runs of whitespace collapse so a copied paragraph previews as text, not
@@ -251,6 +274,35 @@ private struct Thumbnail: View {
         .frame(width: 72, height: 44)
         .clipShape(shape)
         .overlay(shape.strokeBorder(Color.primary.opacity(0.12)))
+    }
+}
+
+/// A link's row leads with its site's icon — a globe until there is one, and a
+/// lock for a link that looked private or single-use and was left unvisited.
+private struct LinkTile: View {
+    let icon: NSImage?
+    let visited: Bool
+    let isSelected: Bool
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+        ZStack {
+            shape.fill(Color.primary.opacity(0.06))
+            if let icon {
+                Image(nsImage: icon)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 18, height: 18)
+            } else {
+                Image(systemName: visited ? "globe" : "lock")
+                    .font(.system(size: 12))
+                    .foregroundStyle(isSelected ? AnyShapeStyle(.white.opacity(0.8)) : AnyShapeStyle(.secondary))
+            }
+        }
+        .frame(width: 28, height: 28)
+        .overlay(shape.strokeBorder(Color.primary.opacity(0.12)))
+        .help(visited ? "" : "Not visited: this link is unencrypted, or looks private or single-use")
     }
 }
 

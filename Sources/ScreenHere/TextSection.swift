@@ -5,6 +5,7 @@ import SwiftUI
 struct TextSection: View {
     @ObservedObject var shortcuts: TextShortcuts
     @ObservedObject var clipboard: ClipboardController
+    @ObservedObject var links: LinkPreviewController
 
     var body: some View {
         VStack(spacing: 1) {
@@ -39,6 +40,13 @@ struct TextSection: View {
                              action: clipboard.openPasteAccessSettings)
                         .foregroundStyle(Theme.warning)
                 }
+                PanelRow(icon: "link", title: "Link Previews") {
+                    BetaChip()
+                    toggle(isOn: links.isEnabled, set: links.setEnabled)
+                        .help("Show the title and icon of copied links in the list. ScreenHere visits a link "
+                              + "when the list shows it, without cookies — never one that looks private or single-use. "
+                              + "The site sees the visit, as it would if you opened the link.")
+                }
                 PanelRow(icon: "clock.arrow.circlepath", title: "Show History",
                          trailingText: "\(clipboard.history.items.count)",
                          action: { HistoryPicker.shared.show() })
@@ -56,6 +64,17 @@ struct TextSection: View {
             .controlSize(.mini)
             .tint(Theme.brand)
             .labelsHidden()
+    }
+
+    private struct BetaChip: View {
+        var body: some View {
+            Text("BETA")
+                .font(.system(size: 8.5, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.brand)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1.5)
+                .background(Capsule().fill(Theme.brand.opacity(0.14)))
+        }
     }
 
     private func warning(_ text: String) -> some View {

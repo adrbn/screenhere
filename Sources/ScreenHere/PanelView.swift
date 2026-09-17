@@ -28,7 +28,7 @@ struct PanelView: View {
             separator
             controls
             separator
-            TextSection(shortcuts: .shared, clipboard: .shared)
+            TextSection(shortcuts: .shared, clipboard: .shared, links: .shared)
             separator
             about
         }

@@ -38,7 +38,7 @@ final class HistoryPicker: NSObject, NSWindowDelegate {
         let panel = KeyablePanel(contentRect: NSRect(origin: .zero, size: Self.size),
                                  styleMask: [.borderless, .nonactivatingPanel],
                                  backing: .buffered, defer: false)
-        panel.contentView = FixedHosting.view(HistoryPickerView(model: model, clipboard: .shared), size: Self.size)
+        panel.contentView = FixedHosting.view(HistoryPickerView(model: model, clipboard: .shared, links: .shared), size: Self.size)
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
