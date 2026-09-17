@@ -5,11 +5,6 @@ enum PanelStrings {
     /// Longest display name rendered before truncating, so the panel stays narrow.
     static let maxNameLength = 26
 
-    /// What ⇧⌘3 does right now, as the sentence following the shortcut chip.
-    static func headline(isOn: Bool) -> String {
-        isOn ? "captures the screen under your pointer" : "is handled by macOS"
-    }
-
     /// The warning line, or nil when there is nothing wrong to report.
     /// A missing permission outranks the takeover state: without it every
     /// capture silently produces nothing.

@@ -26,7 +26,7 @@ Plus two more: copy the text on your screen, and bring back what you copied earl
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.png">
-  <img src="docs/assets/hero-light.png" width="470" alt="The ScreenHere menu open under its menu-bar icon: a live map of two displays with the one under the pointer highlighted, and the app's switches" />
+  <img src="docs/assets/hero-light.png" width="470" alt="The ScreenHere menu open under its menu-bar icon: a live map of two displays with the one under the pointer highlighted, and a tile for each shortcut" />
 </picture>
 
 </div>
@@ -46,7 +46,7 @@ ScreenHere takes over the shortcut you already use and captures only the display
   <img src="docs/assets/capture-light.png" width="760" alt="Two displays: the main one is left alone, the one under the pointer is captured and its preview appears in its corner" />
 </picture>
 
-<kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> sends it straight to the clipboard. Turn on **Preview on Captured Screen** and the thumbnail shows up on the screen you captured, not wherever macOS decides.
+<kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> sends it straight to the clipboard. Turn on **Preview on captured screen** and the thumbnail shows up on the screen you captured, not wherever macOS decides.
 
 **Only the window?** Turn on **Window** in the menu (it's a beta), then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd>: you get the window under your pointer instead of the whole screen, and <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd> copies it. Rather use another shortcut? Click **⇧⌘2** next to **Window shortcut** and press yours.
 
@@ -79,7 +79,7 @@ The last 200 texts and images you copied, in a list under your pointer. Type to 
 
 1. [Download ScreenHere](https://github.com/adrbn/screenhere/releases/latest/download/ScreenHere.dmg) and drag it to **Applications**.
 2. Open it and allow **Screen Recording** when macOS asks, then reopen the app.
-3. Say yes to **Launch at Login**, so the shortcut still works after a restart.
+3. Keep **Launch ScreenHere at login** ticked, so the shortcut still works after a restart.
 
 ScreenHere keeps itself up to date.
 
@@ -103,14 +103,14 @@ No. <kbd>⇧</kbd><kbd>⌘</kbd><kbd>4</kbd>, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>5
 <summary><b>How do I get the normal ⇧⌘3 back, or uninstall?</b></summary>
 <br/>
 
-Click **Restore macOS Shortcuts** in the menu, quit, and move the app to the Trash. ScreenHere also gives the shortcuts back when it quits, when your Mac shuts down, and on the next launch after a crash. If you deleted the app without restoring them, [one Terminal command](docs/HOW-IT-WORKS.md#without-the-app) does it.
+In the menu, click **⋯** then **Restore macOS Shortcuts**, quit, and move the app to the Trash. ScreenHere also gives the shortcuts back when it quits, when your Mac shuts down, and on the next launch after a crash. If you deleted the app without restoring them, [one Terminal command](docs/HOW-IT-WORKS.md#without-the-app) does it.
 </details>
 
 <details>
 <summary><b>⇧⌘7 does nothing.</b></summary>
 <br/>
 
-Another app probably uses the same shortcut (TextSniper does, for example). Turn it off in that app, or turn off **Copy Text from Screen** in ScreenHere.
+Another app probably uses the same shortcut (TextSniper does, for example). Turn it off in that app, or turn off **Text** in ScreenHere's menu.
 </details>
 
 <details>
@@ -124,7 +124,7 @@ Since macOS 15.4, apps have to ask before reading the clipboard in the backgroun
 <summary><b>Can I hide the menu-bar icon?</b></summary>
 <br/>
 
-Yes, with **Hide Menu Bar Icon**. The shortcuts keep working. Open ScreenHere again from Applications to bring the icon back.
+Yes: click **⋯** in the menu, then **Hide Menu Bar Icon**. The shortcuts keep working. Open ScreenHere again from Applications to bring the icon back.
 </details>
 
 ## More

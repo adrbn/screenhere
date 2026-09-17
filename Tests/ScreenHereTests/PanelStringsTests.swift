@@ -4,12 +4,6 @@ import XCTest
 /// Only the panel's wording is unit-tested; the SwiftUI layout is judged by eye.
 final class PanelStringsTests: XCTestCase {
 
-    func testHeadlineFollowsTheShortcutChip() {
-        XCTAssertEqual(PanelStrings.headline(isOn: true),
-                       "captures the screen under your pointer")
-        XCTAssertEqual(PanelStrings.headline(isOn: false), "is handled by macOS")
-    }
-
     func testNothingIsReportedWhenAllIsWell() {
         XCTAssertNil(PanelStrings.problem(status: .on, permissionGranted: true))
         XCTAssertNil(PanelStrings.problem(status: .off, permissionGranted: true))

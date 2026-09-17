@@ -459,6 +459,8 @@ struct ReadmeShots {
         ClipboardController.shared.pose(history, enabled: true,
                                         thumbnails: ["shot": drawing(240, 150, 0.72), "photo": drawing(180, 240, 0.08)])
 
+        WindowShortcuts.shared.pose(enabled: true)
+
         let panelView = PanelView(model: model, onRestoreShortcuts: {}, onHideIcon: {},
                                   onCheckUpdates: {}, onOpenGitHub: {}, onQuit: {})
         let picker = HistoryPickerModel(clipboard: .shared)
@@ -472,7 +474,7 @@ struct ReadmeShots {
             let name = dark ? "dark" : "light"
             let panel = snapshot(panelView.padding(.vertical, 4)
                                     .background(dark ? Color(white: 0.155).opacity(0.94) : Color(white: 0.975).opacity(0.93)),
-                                 width: 300, dark: dark, background: .clear)
+                                 width: 320, dark: dark, background: .clear)
             export(ShotHero(panel: panel, dark: dark), dark: dark, to: "\(out)/hero-\(name).png")
             export(CaptureScene(dark: dark), dark: dark, to: "\(out)/capture-\(name).png")
             export(TextScene(dark: dark), dark: dark, to: "\(out)/text-\(name).png")

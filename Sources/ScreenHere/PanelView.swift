@@ -1,15 +1,12 @@
 import SwiftUI
 
-/// The menu-bar panel.
+/// The menu-bar panel: the live map of the displays, one tile per shortcut, the
+/// options of whatever is switched on, and a footer.
 ///
-/// Its centrepiece is a live map of the displays: the one under the pointer is
-/// filled in the brand colour, the others outlined, and a pointer tracks the
-/// real cursor. That single picture says what the app does in a way a line of
-/// text never did.
-///
-/// Everything below the map is one vocabulary — a 24pt row with a fixed icon
-/// column, a title, and a trailing control or hint. Quit and Check for Updates
-/// are rows too, not loose links in a footer.
+/// The map stays the centrepiece: the display under the pointer is filled in
+/// the brand colour and a pointer tracks the real cursor, which says what the
+/// app does better than a line of text. The tiles follow Control Center, where
+/// the whole tile switches its feature, so four features read at a glance.
 struct PanelView: View {
     @ObservedObject var model: PanelModel
     @ObservedObject var updater = UpdaterController.shared
@@ -22,161 +19,49 @@ struct PanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
-            separator
-            map
-            separator
-            controls
-            separator
-            TextSection(shortcuts: .shared, clipboard: .shared, links: .shared)
-            separator
-            about
+            PanelHero(model: model)
+                .padding(10)
+
+            SectionTitle(text: "Shortcuts")
+            PanelTiles(model: model, window: .shared, text: .shared, clipboard: .shared)
+                .padding(.horizontal, 10)
+
+            SectionTitle(text: "Options")
+                .padding(.top, 10)
+            PanelOptions(model: model, window: .shared, clipboard: .shared, links: .shared)
+                .padding(.horizontal, 6)
+
+            Divider()
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+            footer
         }
-        .frame(width: 300)
+        .frame(width: 320)
         .background(WindowReader { model.attach(window: $0) })
     }
 
-    private var separator: some View {
-        Divider().padding(.horizontal, 14)
-    }
-
-    // MARK: - Header
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 8) {
-                Text("ScreenHere")
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer(minLength: 8)
-                Toggle("", isOn: Binding(get: { model.isOn },
-                                         set: { model.setTakeover($0) }))
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .tint(Theme.brand)
-                    .labelsHidden()
-                    .help(model.isOn ? "Give ⇧⌘3 back to macOS" : "Take ⇧⌘3 over")
+    private var footer: some View {
+        HStack(spacing: 6) {
+            UpdateButton(updater: updater, action: onCheckUpdates)
+            Spacer(minLength: 8)
+            Menu {
+                Button("View on GitHub", action: onOpenGitHub)
+                Divider()
+                Button("Restore macOS Shortcuts", action: onRestoreShortcuts)
+                Button("Hide Menu Bar Icon", action: onHideIcon)
+            } label: {
+                Image(systemName: "ellipsis")
             }
-
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                ShortcutChip(keys: "⇧⌘3")
-                Text(PanelStrings.headline(isOn: model.isOn))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if let problem = PanelStrings.problem(
-                status: model.status,
-                permissionGranted: model.hasPermission,
-                systemStillHandlesShortcut: model.systemStillHandlesShortcut) {
-                Button(action: model.openScreenRecordingSettings) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 10))
-                        Text(problem)
-                            .font(.system(size: 11, weight: .medium))
-                            .fixedSize(horizontal: false, vertical: true)
-                            .multilineTextAlignment(.leading)
-                    }
-                    .foregroundStyle(Theme.warning)
-                }
-                .buttonStyle(.plain)
-                // Only the permission warning is actionable; the rest is status.
-                .disabled(model.hasPermission)
-                .padding(.top, 1)
-            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .frame(width: 26, height: 26)
+            .background(Circle().fill(Color.primary.opacity(0.06)))
+            .help("More")
+            RoundButton(icon: "power", help: "Quit ScreenHere", action: onQuit)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 12)
-        .padding(.bottom, 11)
-    }
-
-    // MARK: - Display map
-
-    private var map: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            DisplayMap(displays: model.displays.map(\.bounds),
-                       names: model.displayNames,
-                       pointer: model.pointer,
-                       activeIndex: model.activeDisplayIndex)
-                .frame(height: 96)
-                .frame(maxWidth: .infinity)
-                .animation(.easeOut(duration: 0.14), value: model.activeDisplayIndex)
-
-            HStack(spacing: 0) {
-                Label {
-                    Text(PanelStrings.shortName(model.activeDisplayName))
-                        .font(.system(size: 11, weight: .medium))
-                        .lineLimit(1)
-                } icon: {
-                    Image(systemName: "cursorarrow")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.brand)
-                }
-                Spacer(minLength: 10)
-                Label {
-                    Text(model.destination)
-                        .font(.system(size: 11))
-                        .lineLimit(1)
-                } icon: {
-                    Image(systemName: "tray.and.arrow.down")
-                        .font(.system(size: 10))
-                }
-                .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-    }
-
-    // MARK: - Rows
-
-    private var controls: some View {
-        VStack(spacing: 1) {
-            PanelRow(icon: "power", title: "Launch at Login") {
-                Toggle("", isOn: Binding(get: { model.launchesAtLogin },
-                                         set: { model.setLaunchAtLogin($0) }))
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .tint(Theme.brand)
-                    .labelsHidden()
-            }
-            PanelRow(icon: "photo.on.rectangle.angled", title: "Preview on Captured Screen") {
-                Toggle("", isOn: Binding(get: { model.showsOwnPreview },
-                                         set: { model.setOwnPreview($0) }))
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .tint(Theme.brand)
-                    .labelsHidden()
-                    .help("Show the capture preview on the screen it came from, "
-                          + "instead of wherever macOS puts it")
-            }
-            PanelRow(icon: "arrow.uturn.backward", title: "Restore macOS Shortcuts",
-                     action: onRestoreShortcuts)
-            PanelRow(icon: "eye.slash", title: "Hide Menu Bar Icon", action: onHideIcon)
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
-    }
-
-    private var about: some View {
-        VStack(spacing: 1) {
-            PanelRow(icon: updater.availableVersion == nil
-                        ? "arrow.down.circle" : "arrow.down.circle.fill",
-                     title: updater.availableVersion.map { "Update to \($0)" }
-                        ?? "Check for Updates",
-                     // "0.0.0" is the unbundled fallback; showing it would be a
-                     // lie, and there is nothing useful to put in its place.
-                     trailingText: UpdaterController.currentVersion == "0.0.0"
-                        ? nil : UpdaterController.currentVersion,
-                     action: onCheckUpdates)
-            PanelRow(icon: "chevron.left.forwardslash.chevron.right", title: "View on GitHub",
-                     action: onOpenGitHub)
-            PanelRow(icon: "xmark.circle", title: "Quit ScreenHere",
-                     trailingText: "⌘Q", action: onQuit)
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
     }
 }
 
@@ -187,6 +72,18 @@ enum Theme {
     /// as ScreenHere rather than as a generic system sheet.
     static let brand = Color(red: 0.49, green: 0.31, blue: 0.94)
     static let warning = Color(red: 0.85, green: 0.45, blue: 0.05)
+}
+
+private struct SectionTitle: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 6)
+    }
 }
 
 struct ShortcutChip: View {
@@ -205,12 +102,81 @@ struct ShortcutChip: View {
     }
 }
 
-/// One row of the panel: fixed icon column, title, optional trailing control or
-/// hint. Rows with an action highlight on hover; rows that only host a control
-/// do not, because there is nothing to click in the row itself.
+struct BetaChip: View {
+    var body: some View {
+        Text("BETA")
+            .font(.system(size: 8, weight: .bold, design: .rounded))
+            .foregroundStyle(Theme.brand)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1.5)
+            .background(Capsule().fill(Theme.brand.opacity(0.14)))
+    }
+}
+
+/// Check for Updates, which turns into a highlighted Update button once
+/// Sparkle has found one.
+private struct UpdateButton: View {
+    @ObservedObject var updater: UpdaterController
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        let available = updater.availableVersion
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: available == nil ? "arrow.down.circle" : "arrow.down.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(available == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(Theme.brand))
+                Text(available.map { "Update to \($0)" } ?? "Check for Updates")
+                    .font(.system(size: 12, weight: available == nil ? .regular : .medium))
+                // "0.0.0" is the unbundled fallback; showing it would be a lie.
+                if available == nil, UpdaterController.currentVersion != "0.0.0" {
+                    Text(UpdaterController.currentVersion)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 26)
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(available != nil ? Theme.brand.opacity(0.13)
+                                       : Color.primary.opacity(hovering ? 0.07 : 0)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+    }
+}
+
+private struct RoundButton: View {
+    let icon: String
+    let help: String
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(Color.primary.opacity(hovering ? 0.12 : 0.06)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(help)
+    }
+}
+
+/// One row of the options: fixed icon column, title, optional trailing control
+/// or hint. Rows with an action highlight on hover; rows that only host a
+/// control do not, because there is nothing to click in the row itself.
 struct PanelRow<Trailing: View>: View {
     let icon: String
     let title: String
+    var beta = false
     var trailingText: String?
     var action: (() -> Void)?
     @ViewBuilder var trailing: () -> Trailing
@@ -221,10 +187,11 @@ struct PanelRow<Trailing: View>: View {
         let content = HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 11))
-                .frame(width: 15, alignment: .center)
+                .frame(width: 16, alignment: .center)
                 .foregroundStyle(.secondary)
             Text(title)
                 .font(.system(size: 12))
+            if beta { BetaChip() }
             Spacer(minLength: 8)
             if let trailingText {
                 Text(trailingText)
@@ -235,8 +202,8 @@ struct PanelRow<Trailing: View>: View {
             trailing()
         }
         .padding(.horizontal, 6)
-        .frame(height: 24)
-        .background(RoundedRectangle(cornerRadius: 5, style: .continuous)
+        .frame(height: 26)
+        .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
             .fill(hovering && action != nil
                   ? AnyShapeStyle(Color.primary.opacity(0.07))
                   : AnyShapeStyle(.clear)))
@@ -255,86 +222,15 @@ struct PanelRow<Trailing: View>: View {
 extension PanelRow where Trailing == EmptyView {
     init(icon: String, title: String, trailingText: String? = nil,
          action: @escaping () -> Void) {
-        self.init(icon: icon, title: title, trailingText: trailingText,
+        self.init(icon: icon, title: title, beta: false, trailingText: trailingText,
                   action: action, trailing: { EmptyView() })
     }
 }
 
 extension PanelRow {
-    init(icon: String, title: String, @ViewBuilder trailing: @escaping () -> Trailing) {
-        self.init(icon: icon, title: title, trailingText: nil,
+    init(icon: String, title: String, beta: Bool = false,
+         @ViewBuilder trailing: @escaping () -> Trailing) {
+        self.init(icon: icon, title: title, beta: beta, trailingText: nil,
                   action: nil, trailing: trailing)
-    }
-}
-
-/// The live arrangement, drawn from the same geometry the capture uses.
-private struct DisplayMap: View {
-    let displays: [CGRect]
-    let names: [String]
-    let pointer: CGPoint
-    let activeIndex: Int
-
-    var body: some View {
-        GeometryReader { geo in
-            let fitted = DisplayMapLayout.fit(displays: displays, pointer: pointer,
-                                              into: geo.size, padding: 4)
-            ZStack(alignment: .topLeading) {
-                ForEach(Array(fitted.rects.enumerated()), id: \.offset) { index, r in
-                    screen(r, isActive: index == activeIndex,
-                           name: index < names.count ? names[index] : "")
-                }
-                if let p = fitted.pointer {
-                    Pointer()
-                        .fill(Color.primary)
-                        .overlay(Pointer().stroke(Color(nsColor: .textBackgroundColor),
-                                                  lineWidth: 1.2))
-                        .frame(width: 11, height: 14)
-                        .shadow(color: .black.opacity(0.25), radius: 1.5, y: 0.5)
-                        .offset(x: p.x - 1, y: p.y - 1)
-                }
-            }
-        }
-    }
-
-    private func screen(_ r: CGRect, isActive: Bool, name: String) -> some View {
-        RoundedRectangle(cornerRadius: 5, style: .continuous)
-            .fill(isActive ? Theme.brand.opacity(0.16) : Color.primary.opacity(0.045))
-            .overlay(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .strokeBorder(isActive ? Theme.brand : Color.primary.opacity(0.22),
-                                  lineWidth: isActive ? 1.5 : 1)
-            )
-            .overlay(alignment: .bottomLeading) {
-                // Only label a display that has room for it; a clipped name is
-                // worse than none.
-                if r.width >= 62, !name.isEmpty {
-                    Text(name)
-                        .font(.system(size: 8.5, weight: isActive ? .semibold : .regular))
-                        .foregroundStyle(isActive ? AnyShapeStyle(Theme.brand)
-                                                  : AnyShapeStyle(.secondary))
-                        .lineLimit(1)
-                        .padding(.horizontal, 4)
-                        .padding(.bottom, 3)
-                        .frame(maxWidth: r.width, alignment: .leading)
-                }
-            }
-            .frame(width: r.width, height: r.height)
-            .offset(x: r.minX, y: r.minY)
-    }
-}
-
-/// The same silhouette the app icon uses, on a 100-unit square.
-private struct Pointer: Shape {
-    func path(in rect: CGRect) -> Path {
-        func P(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
-            CGPoint(x: rect.minX + x / 100 * rect.width,
-                    y: rect.minY + (100 - y) / 100 * rect.height)
-        }
-        var p = Path()
-        p.move(to: P(0, 100)); p.addLine(to: P(0, 22))
-        p.addLine(to: P(24, 46)); p.addLine(to: P(40, 15))
-        p.addLine(to: P(58, 24)); p.addLine(to: P(42, 54))
-        p.addLine(to: P(76, 58)); p.closeSubpath()
-        return p
     }
 }
