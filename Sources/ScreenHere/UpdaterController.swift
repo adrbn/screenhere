@@ -59,16 +59,12 @@ final class UpdaterController: NSObject, ObservableObject, SPUUpdaterDelegate {
         controller.updater.checkForUpdates()
     }
 
-    /// ScreenHere is an `LSUIElement` agent, so it owns no Dock tile and is
-    /// never the active app on its own. Sparkle's update window is an ordinary
-    /// window: shown by a background app it opens *behind* everything, and
-    /// since the flow is modal every click elsewhere just beeps — an invisible
-    /// dialog holding the app hostage. Promote and activate first.
+    /// Sparkle's update window is an ordinary window: shown by a menu bar app
+    /// it opens *behind* everything, and since the flow is modal every click
+    /// elsewhere just beeps — an invisible dialog holding the app hostage.
+    /// The Dock tile this takes goes away when Sparkle's session ends.
     private func comeToFront() {
-        if NSApp.activationPolicy() != .regular {
-            NSApp.setActivationPolicy(.regular)
-        }
-        NSApp.activate(ignoringOtherApps: true)
+        DockPresence.shared.comeToFront()
     }
 
     // MARK: - SPUUpdaterDelegate
@@ -128,5 +124,9 @@ extension UpdaterController: SPUStandardUserDriverDelegate {
             self.availableVersion = update.displayVersionString
             if state.userInitiated { self.comeToFront() }
         }
+    }
+
+    nonisolated func standardUserDriverWillFinishUpdateSession() {
+        Task { @MainActor in DockPresence.shared.stepBack() }
     }
 }

@@ -25,6 +25,7 @@ The codebase is small and well tested. Good places to start:
 - [`TakeoverController.swift`](../Sources/ScreenHere/TakeoverController.swift): borrowing the shortcut and giving it back.
 - [`WindowUnderPointer.swift`](../Sources/ScreenHere/WindowUnderPointer.swift): which window the pointer is on, for the window capture beta.
 - [`KeyShortcut.swift`](../Sources/ScreenHere/KeyShortcut.swift): the window shortcut the user records, its rules and how its keys are written, with the field itself in [`ShortcutRecorder.swift`](../Sources/ScreenHere/ShortcutRecorder.swift).
+- [`DockPresence.swift`](../Sources/ScreenHere/DockPresence.swift): the Dock tile ScreenHere borrows while one of its windows needs to come to the front.
 - [`PanelView.swift`](../Sources/ScreenHere/PanelView.swift): the menu-bar panel, with its hero, tiles and options in the `Panel*.swift` files next to it.
 
 How each feature behaves is described in [HOW-IT-WORKS.md](HOW-IT-WORKS.md). Issues and pull requests are welcome.

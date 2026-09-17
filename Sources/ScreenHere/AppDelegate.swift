@@ -121,15 +121,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         stack.spacing = 8
         stack.frame = NSRect(x: 0, y: 0, width: 380, height: 46)
 
-        // An .accessory app owns no Dock tile and is never frontmost on its own,
-        // so a modal it puts up opens *behind* everything — the first attempt
-        // at this greeting recorded itself as answered without ever being seen.
-        // Promote for the duration, exactly as the updater does for Sparkle's
-        // window, then drop back to being invisible.
-        let policy = NSApp.activationPolicy()
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        defer { NSApp.setActivationPolicy(policy) }
+        // The first attempt at this greeting opened behind everything and
+        // recorded itself as answered without ever being seen.
+        MainActor.assumeIsolated { DockPresence.shared.comeToFront() }
+        defer { MainActor.assumeIsolated { DockPresence.shared.stepBack() } }
 
         let alert = NSAlert()
         alert.messageText = "ScreenHere is running"
