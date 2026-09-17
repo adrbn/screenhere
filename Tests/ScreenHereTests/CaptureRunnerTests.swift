@@ -11,6 +11,15 @@ final class CaptureRunnerTests: XCTestCase {
                        ["-p", "-D2"])
     }
 
+    /// Verified on macOS 27.0: `-p -l <id>` sends the window to the user's
+    /// destination, with the shadow their Screenshot settings ask for.
+    func testAWindowCaptureNamesTheWindow() {
+        XCTAssertEqual(CaptureRunner.arguments(destination: .userSettings, windowID: 4242),
+                       ["-p", "-l", "4242"])
+        XCTAssertEqual(CaptureRunner.arguments(destination: .clipboard, windowID: 7),
+                       ["-c", "-l", "7"])
+    }
+
     /// ⌃⇧⌘3 means "to the clipboard" in macOS regardless of settings.
     func testClipboardDestinationForcesTheClipboard() {
         XCTAssertEqual(CaptureRunner.arguments(destination: .clipboard, displayIndex: 1),

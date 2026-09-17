@@ -23,6 +23,8 @@ The codebase is small and well tested. Good places to start:
 
 - [`CursorDisplay.swift`](../Sources/ScreenHere/CursorDisplay.swift): which display the pointer is on.
 - [`TakeoverController.swift`](../Sources/ScreenHere/TakeoverController.swift): borrowing the shortcut and giving it back.
+- [`WindowUnderPointer.swift`](../Sources/ScreenHere/WindowUnderPointer.swift): which window the pointer is on, for the window capture beta.
+- [`KeyShortcut.swift`](../Sources/ScreenHere/KeyShortcut.swift): the window shortcut the user records, its rules and how its keys are written, with the field itself in [`ShortcutRecorder.swift`](../Sources/ScreenHere/ShortcutRecorder.swift).
 - [`PanelView.swift`](../Sources/ScreenHere/PanelView.swift): the menu-bar panel.
 
 How each feature behaves is described in [HOW-IT-WORKS.md](HOW-IT-WORKS.md). Issues and pull requests are welcome.

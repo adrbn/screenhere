@@ -55,6 +55,8 @@ final class HotkeyRegistrar: HotkeyBinding {
     static let takeoverSignature: OSType = 0x53_43_52_48
     /// 'SCRT' — the text and clipboard shortcuts.
     static let textSignature: OSType = 0x53_43_52_54
+    /// 'SCRW' — capturing the window under the pointer.
+    static let windowSignature: OSType = 0x53_43_52_57
 
     /// Each registrar installs its own handler, and a handler that recognises
     /// an event consumes it. Distinct signatures keep one registrar from

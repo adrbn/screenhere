@@ -48,6 +48,8 @@ ScreenHere takes over the shortcut you already use and captures only the display
 
 <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> sends it straight to the clipboard. Turn on **Preview on Captured Screen** and the thumbnail shows up on the screen you captured, not wherever macOS decides.
 
+**Only the window?** Turn on **Window** in the menu (it's a beta), then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd>: you get the window under your pointer instead of the whole screen, and <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd> copies it. Rather use another shortcut? Click **⇧⌘2** next to **Window shortcut** and press yours.
+
 ### ⇧⌘7 · Copy the text on your screen
 
 <picture>
@@ -127,7 +129,7 @@ Yes, with **Hide Menu Bar Icon**. The shortcuts keep working. Open ScreenHere ag
 
 ## More
 
-- [How it works](docs/HOW-IT-WORKS.md): borrowing the shortcut and giving it back, the capture preview, text recognition, the clipboard history and link previews.
+- [How it works](docs/HOW-IT-WORKS.md): borrowing the shortcut and giving it back, window capture, the capture preview, text recognition, the clipboard history and link previews.
 - [Building from source](docs/BUILDING.md)
 - [Report a bug or ask for a feature](https://github.com/adrbn/screenhere/issues)
 

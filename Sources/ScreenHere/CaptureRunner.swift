@@ -27,10 +27,23 @@ enum CaptureRunner {
         }
     }
 
+    /// Verified on macOS 27.0: `-p` honours `-l` too, and applies the shadow
+    /// the user's Screenshot settings ask for.
+    static func arguments(destination: CaptureDestination, windowID: CGWindowID) -> [String] {
+        switch destination {
+        case .userSettings: return ["-p", "-l", "\(windowID)"]
+        case .clipboard: return ["-c", "-l", "\(windowID)"]
+        }
+    }
+
     static func run(destination: CaptureDestination, displayIndex: Int) {
+        run(arguments: arguments(destination: destination, displayIndex: displayIndex))
+    }
+
+    static func run(arguments: [String]) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = arguments(destination: destination, displayIndex: displayIndex)
+        process.arguments = arguments
         try? process.run()
     }
 

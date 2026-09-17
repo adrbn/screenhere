@@ -4,6 +4,7 @@ The details behind each feature, for the curious and for anyone who wants to che
 
 - [Taking over ⇧⌘3](#taking-over-3)
 - [Giving the shortcut back](#giving-the-shortcut-back)
+- [Capturing a window (beta)](#capturing-a-window-beta)
 - [The capture preview](#the-capture-preview)
 - [Copy text from the screen](#copy-text-from-the-screen)
 - [Clipboard history](#clipboard-history)
@@ -48,6 +49,21 @@ defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 28 '<dic
 ```
 
 The same command with `29` and `1441792` restores <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>.
+
+## Capturing a window (beta)
+
+Turn on **Window** in the panel and ScreenHere can capture only the window under the pointer. It is off by default. Then <kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd> captures the window, and <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd> sends it to the clipboard, as <kbd>⌃</kbd> does for the screen.
+
+**Window shortcut** takes any other shortcut: click it, press the keys, or <kbd>Esc</kbd> to keep the one you had — as does closing the menu, or pressing the shortcut you already have. The arrow next to it goes back to <kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd>. A shortcut needs <kbd>⌘</kbd> or <kbd>⌥</kbd>, and leaves out <kbd>⌃</kbd>, which ScreenHere adds for the clipboard. The ones ScreenHere and macOS already use for screenshots are refused. While **Window** is on, the shortcut belongs to ScreenHere and no longer reaches the app in front. If another app registered it first, the tile says **Shortcut in use**. Keys are shown as your keyboard prints them, so a French keyboard reads <kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd> too.
+
+To find the window, ScreenHere lists the windows on screen from front to back (`CGWindowListCopyWindowInfo`) and takes the first ordinary one under the pointer. It skips its own windows, invisible ones and anything under 40 points on a side, and looks through transparent overlays that cover a whole display, and through the pointer itself, which macOS sometimes draws in a small window of its own. Over the Dock, a menu or the menu bar, or with no window under the pointer, you get the display, as with <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>, and ScreenHere notes in the system log (layers and sizes, never titles) what was under the pointer. Then it runs:
+
+```
+/usr/sbin/screencapture -p -l <window id>     # your configured destination
+/usr/sbin/screencapture -c -l <window id>     # with ⌃, the clipboard
+```
+
+As for the display, macOS's own binary keeps your destination, format and sound, and the window shadow follows your macOS setting.
 
 ## The capture preview
 

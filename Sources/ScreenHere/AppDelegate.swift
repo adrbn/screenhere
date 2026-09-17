@@ -45,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LinkPreviewController.shared.activate()
         ClipboardController.shared.activate()
         TextShortcuts.shared.activate()
+        WindowShortcuts.shared.activate()
 
         greetIfNeeded()
     }
