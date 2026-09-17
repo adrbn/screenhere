@@ -1,7 +1,7 @@
 # Releasing
 
-Maintainer notes. Nothing here is needed to use or build ScreenHere — see the
-[README](../README.md) for that.
+Maintainer notes. Nothing here is needed to use or build ScreenHere: see the
+[README](../README.md) and [BUILDING.md](BUILDING.md) for that.
 
 ## Cutting a release
 
