@@ -15,7 +15,7 @@ Native Swift and SwiftUI, one dependency ([Sparkle](https://sparkle-project.org)
 
 > `swift run` launches the bare executable, which has no `Info.plist` identity, so `LSUIElement`, Launch at Login and the Screen Recording grant only behave correctly from the packaged `.app`. Always test the installed app.
 
-The app icon is generated from `scripts/make-icon.swift`, and the README pictures by `scripts/readme-shots.sh`. Releases are covered in [RELEASING.md](RELEASING.md).
+The app icon is an Icon Composer document, `Resources/AppIcon.icon`, compiled by `actool` during the build (it ships with Xcode 26; without it the app builds with no icon). The README pictures are drawn by `scripts/readme-shots.sh`. Releases are covered in [RELEASING.md](RELEASING.md).
 
 ## Finding your way around
 

@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="docs/assets/icon.png" width="112" height="112" alt="ScreenHere icon" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/icon-dark.png">
+  <img src="docs/assets/icon-light.png" width="128" height="128" alt="ScreenHere icon" />
+</picture>
 
 # ScreenHere
 

@@ -18,8 +18,6 @@ xcrun notarytool store-credentials screenhere --apple-id <apple-id> --team-id <t
 NOTARY_PROFILE=screenhere ./scripts/release.sh 1.0.1
 ```
 
-The app icon is generated from `scripts/make-icon.swift`.
-
 
 ## Why not CI
 

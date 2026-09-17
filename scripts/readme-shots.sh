@@ -17,6 +17,15 @@ swiftc -parse-as-library -target "$(uname -m)-apple-macos14.0" \
 "$WORK/readme-shots" "$WORK"
 "$WORK/readme-shots" "$WORK" button
 
+# The icon comes from Icon Composer's own renderer, when the app is installed.
+ICTOOL="/Applications/Icon Composer.app/Contents/Executables/ictool"
+if [ -x "$ICTOOL" ]; then
+    for pair in Default:light Dark:dark; do
+        "$ICTOOL" Resources/AppIcon.icon --export-image --output-file "$WORK/icon-${pair#*:}.png" \
+            --platform macOS --rendition "${pair%%:*}" --width 256 --height 256 --scale 1 >/dev/null
+    done
+fi
+
 for picture in "$WORK"/*.png; do
     if command -v pngquant >/dev/null; then
         pngquant --quality 85-98 --speed 1 --force --output "docs/assets/$(basename "$picture")" "$picture"

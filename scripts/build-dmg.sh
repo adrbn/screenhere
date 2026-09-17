@@ -28,9 +28,22 @@ fi
 #   xcrun notarytool store-credentials <name> --apple-id ... --team-id ... --password ...
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 
-echo "==> Generating the app icon..."
-swift scripts/make-icon.swift Resources/AppIcon.iconset
-iconutil -c icns Resources/AppIcon.iconset -o Resources/AppIcon.icns
+# The icon is an Icon Composer document. actool renders it into Assets.car,
+# which holds the Liquid Glass layers for macOS 26 and flattened pictures for
+# older systems, plus a small AppIcon.icns fallback. It ships with Xcode 26,
+# not with the Command Line Tools, so a build without it just has no icon.
+ICON_OUT="${OUT}/icon"
+rm -rf "$ICON_OUT"
+mkdir -p "$ICON_OUT"
+if xcrun --find actool >/dev/null 2>&1; then
+    echo "==> Compiling the app icon..."
+    xcrun actool Resources/AppIcon.icon --compile "$ICON_OUT" \
+        --platform macosx --minimum-deployment-target 13.0 --app-icon AppIcon \
+        --output-partial-info-plist "${ICON_OUT}/partial.plist" >/dev/null
+    [ -f "${ICON_OUT}/Assets.car" ] || { echo "error: actool produced no Assets.car" >&2; exit 1; }
+else
+    echo "==> WARNING: actool not found (it comes with Xcode 26), building without an icon."
+fi
 
 echo "==> Building ($CONFIG)..."
 # Pin the deployment target: a current Swift toolchain otherwise stamps the
@@ -46,7 +59,7 @@ rm -rf "$APP_DIR"
 mkdir -p "${APP_DIR}/Contents/MacOS" "${APP_DIR}/Contents/Resources"
 cp "$BIN" "${APP_DIR}/Contents/MacOS/${EXECUTABLE}"
 cp "Resources/Info.plist" "${APP_DIR}/Contents/Info.plist"
-cp "Resources/AppIcon.icns" "${APP_DIR}/Contents/Resources/AppIcon.icns"
+cp "$ICON_OUT"/Assets.car "$ICON_OUT"/AppIcon.icns "${APP_DIR}/Contents/Resources/" 2>/dev/null || true
 
 # SwiftPM links against Sparkle but does not assemble app bundles, so the
 # framework has to be embedded by hand. The executable finds it through the
