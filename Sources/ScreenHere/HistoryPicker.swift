@@ -78,9 +78,17 @@ private final class KeyablePanel: NSPanel {
 @MainActor
 final class HistoryPickerModel: ObservableObject {
     @Published var query = "" {
-        didSet { selection = 0 }
+        didSet {
+            selection = 0
+            reveals += 1
+        }
     }
     @Published var selection = 0
+    /// Bumped whenever the selection moved on its own — the arrows, or a
+    /// filter that narrowed the list — so the list scrolls the row into view.
+    /// Hovering must not: the pointer is already on the row, and scrolling
+    /// would slide the rows out from under it.
+    @Published private(set) var reveals = 0
     /// The footer is asking whether to clear everything.
     @Published private(set) var confirmingClear = false
 
@@ -99,6 +107,7 @@ final class HistoryPickerModel: ObservableObject {
         let count = results.count
         guard count > 0 else { return }
         selection = min(max(selection + delta, 0), count - 1)
+        reveals += 1
     }
 
     /// Return copies — and never confirms clearing everything.

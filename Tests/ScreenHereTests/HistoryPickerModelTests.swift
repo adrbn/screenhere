@@ -61,4 +61,29 @@ final class HistoryPickerModelTests: XCTestCase {
         model.submit()
         XCTAssertEqual(chosen.compactMap(\.text), ["hello"])
     }
+
+    /// Hovering a row must not scroll the list to it: the pointer is already
+    /// on the row, and scrolling would slide the rows out from under it.
+    func testHoveringAsksForNoScrolling() {
+        let before = model.reveals
+        model.selection = 0
+        XCTAssertEqual(model.reveals, before)
+    }
+
+    func testTheArrowsAskForTheRowToBeShownWhole() {
+        ClipboardController.shared.pose(ClipboardHistory.empty
+            .adding("hello", source: nil, at: Date())
+            .adding("goodbye", source: nil, at: Date()), enabled: true)
+        let before = model.reveals
+        model.move(by: 1)
+        XCTAssertEqual(model.selection, 1)
+        XCTAssertEqual(model.reveals, before + 1)
+    }
+
+    func testFilteringAsksForTheTopOfTheList() {
+        let before = model.reveals
+        model.query = "hel"
+        XCTAssertEqual(model.selection, 0)
+        XCTAssertEqual(model.reveals, before + 1)
+    }
 }

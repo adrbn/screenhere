@@ -72,9 +72,12 @@ struct HistoryPickerView: View {
                 }
                 .padding(6)
             }
-            .onChange(of: model.selection) { index in
-                guard results.indices.contains(index) else { return }
-                proxy.scrollTo(results[index].id)
+            // Only what the keyboard or the filter selected is scrolled to.
+            // Hovering already put the pointer on the row; moving the list
+            // under it would take it away again.
+            .onChange(of: model.reveals) { _ in
+                guard results.indices.contains(model.selection) else { return }
+                proxy.scrollTo(results[model.selection].id)
             }
         }
     }
