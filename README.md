@@ -66,7 +66,7 @@ Drag over text you can see but can't select: a shared screen, a video, a photo, 
   <img src="docs/assets/history-light.png" width="760" alt="The clipboard history: a searchable list of recently copied texts, links and images" />
 </picture>
 
-The last 200 texts and images you copied, in a list under your pointer. Type to filter, press <kbd>Return</kbd>, paste. Off until you turn it on.
+The last 200 texts and images you copied, in a list under your pointer. Type to filter, press <kbd>Return</kbd>, paste. A picture can also be dragged out into any app, or saved to your Downloads folder. Off until you turn it on.
 
 ## Private by design
 
