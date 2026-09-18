@@ -113,6 +113,30 @@ final class ClipboardImageStoreTests: XCTestCase {
         store.deleteAll()
         XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
     }
+
+    /// Saving a picture where the user will find it: a name that says what it
+    /// is, and never overwriting what is already in the folder.
+    func testCopyingIntoAFolderNamesTheFileAndNeverOverwrites() throws {
+        let image = try XCTUnwrap(store.ingest(picture(.png), type: UTType.png.identifier))
+        let folder = directory.appendingPathComponent("Downloads")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let date = Date(timeIntervalSince1970: 1_600_000_000)
+
+        let first = try store.copy(image, into: folder, at: date)
+        XCTAssertTrue(first.lastPathComponent.hasPrefix("Clipboard "), first.lastPathComponent)
+        XCTAssertEqual(first.pathExtension, "png")
+
+        let second = try store.copy(image, into: folder, at: date)
+        XCTAssertNotEqual(second.lastPathComponent, first.lastPathComponent)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: first.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: second.path))
+    }
+
+    func testCopyingAPictureThatIsGoneThrows() throws {
+        let image = try XCTUnwrap(store.ingest(picture(.png), type: UTType.png.identifier))
+        try FileManager.default.removeItem(at: store.fileURL(for: image))
+        XCTAssertThrowsError(try store.copy(image, into: directory, at: Date()))
+    }
 }
 
 /// Putting a picture back: its own format at once, TIFF only when asked —

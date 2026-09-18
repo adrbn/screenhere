@@ -108,6 +108,22 @@ final class ClipboardController: ObservableObject {
         return thumbnail
     }
 
+    /// Where the picture sits on disk, so a row can be dragged into any app.
+    /// Not checked for existence: the list asks for this on every redraw.
+    func fileURL(for image: ClipImage) -> URL {
+        images.fileURL(for: image)
+    }
+
+    /// A copy of the picture in the Downloads folder, where the Finder and the
+    /// Dock show it. Nil when the picture is gone or the copy fails.
+    @discardableResult
+    func saveToDownloads(_ image: ClipImage) -> URL? {
+        guard let downloads = FileManager.default.urls(for: .downloadsDirectory,
+                                                       in: .userDomainMask).first
+        else { return nil }
+        return try? images.copy(image, into: downloads)
+    }
+
     func remove(_ item: ClipItem) {
         apply(history.removing(item.id))
     }

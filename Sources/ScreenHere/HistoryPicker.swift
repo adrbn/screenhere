@@ -32,6 +32,14 @@ final class HistoryPicker: NSObject, NSWindowDelegate {
                 Toast.show("That image is no longer on this Mac", systemImage: "exclamationmark.triangle")
             }
         }
+        model.onSave = { item in
+            guard let image = item.image else { return }
+            if ClipboardController.shared.saveToDownloads(image) != nil {
+                Toast.show("Saved to Downloads", systemImage: "arrow.down.circle")
+            } else {
+                Toast.show("That image is no longer on this Mac", systemImage: "exclamationmark.triangle")
+            }
+        }
         model.onClose = { [weak self] in self?.close() }
         model.onClear = { ClipboardController.shared.clear() }
 
@@ -94,6 +102,7 @@ final class HistoryPickerModel: ObservableObject {
 
     let clipboard: ClipboardController
     var onChoose: (ClipItem) -> Void = { _ in }
+    var onSave: (ClipItem) -> Void = { _ in }
     var onClose: () -> Void = {}
     var onClear: () -> Void = {}
 

@@ -71,6 +71,39 @@ struct ClipboardImageStore: Sendable {
         try? Data(contentsOf: fileURL(for: image))
     }
 
+    /// Puts a copy of the picture in a folder of the user's, named the way
+    /// macOS names a screenshot. Never overwrites: a name already taken gets
+    /// a number, as the Finder does.
+    @discardableResult
+    func copy(_ image: ClipImage, into folder: URL, at date: Date = Date()) throws -> URL {
+        let destination = Self.free(folder.appendingPathComponent(Self.name(for: image, at: date)))
+        try FileManager.default.copyItem(at: fileURL(for: image), to: destination)
+        return destination
+    }
+
+    static func name(for image: ClipImage, at date: Date) -> String {
+        "Clipboard \(stamp.string(from: date)).\(image.format.fileExtension)"
+    }
+
+    private static let stamp: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
+        return formatter
+    }()
+
+    private static func free(_ url: URL) -> URL {
+        guard FileManager.default.fileExists(atPath: url.path) else { return url }
+        let name = url.deletingPathExtension().lastPathComponent
+        let folder = url.deletingLastPathComponent()
+        for number in 2... {
+            let next = folder.appendingPathComponent("\(name) (\(number))")
+                .appendingPathExtension(url.pathExtension)
+            if !FileManager.default.fileExists(atPath: next.path) { return next }
+        }
+        return url
+    }
+
     func thumbnail(for image: ClipImage) -> CGImage? {
         guard let source = CGImageSourceCreateWithURL(thumbnailURL(for: image) as CFURL, nil) else { return nil }
         return CGImageSourceCreateImageAtIndex(source, 0, nil)

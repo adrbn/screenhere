@@ -60,10 +60,12 @@ struct HistoryPickerView: View {
                         let link = links.isEnabled ? item.text.flatMap(CopiedLink.init(text:)) : nil
                         HistoryRow(item: item,
                                    thumbnail: item.image.flatMap(clipboard.thumbnail(for:)),
+                                   file: item.image.map(clipboard.fileURL(for:)),
                                    link: link,
                                    linkPreview: link.flatMap(links.preview(for:)),
                                    isSelected: index == model.selection,
                                    onChoose: { model.onChoose(item) },
+                                   onSave: { model.onSave(item) },
                                    onRemove: { model.remove(item) })
                             .id(item.id)
                             .onHover { if $0 { model.selection = index } }
@@ -174,17 +176,20 @@ private struct FooterButton: View {
 private struct HistoryRow: View {
     let item: ClipItem
     let thumbnail: NSImage?
+    /// The picture on disk, set for a picture's row.
+    let file: URL?
     /// Set only while link previews are on.
     let link: CopiedLink?
     let linkPreview: LinkPreviewController.Shown?
     let isSelected: Bool
     let onChoose: () -> Void
+    let onSave: () -> Void
     let onRemove: () -> Void
 
     var body: some View {
         HStack(alignment: item.image == nil && link == nil ? .top : .center, spacing: 10) {
             if item.image != nil {
-                Thumbnail(image: thumbnail)
+                Thumbnail(image: thumbnail, file: file)
             } else if let link {
                 LinkTile(icon: linkPreview?.icon, visited: link.mayVisit, isSelected: isSelected)
             }
@@ -199,16 +204,18 @@ private struct HistoryRow: View {
                                                 : AnyShapeStyle(.secondary))
             }
             Spacer(minLength: 6)
-            if isSelected {
-                Button(action: onRemove) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.8))
-                        .frame(width: 18, height: 18)
+            // Always here, even unseen: buttons that appear with the selection
+            // would narrow the text, rewrap it, and push every row below.
+            HStack(spacing: 2) {
+                if item.image != nil {
+                    RowButton(systemImage: "arrow.down", size: 9.5, action: onSave)
+                        .help("Save a copy in Downloads")
                 }
-                .buttonStyle(.plain)
-                .help("Remove from history")
+                RowButton(systemImage: "xmark", size: 9, action: onRemove)
+                    .help("Remove from history")
             }
+            .opacity(isSelected ? 1 : 0)
+            .allowsHitTesting(isSelected)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
@@ -254,10 +261,35 @@ private struct HistoryRow: View {
     }
 }
 
+/// The buttons on the selected row, drawn by hand for the same reason as the
+/// footer's: the list never activates ScreenHere.
+private struct RowButton: View {
+    let systemImage: String
+    let size: CGFloat
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: size, weight: .bold))
+                .foregroundStyle(.white.opacity(isHovered ? 1 : 0.8))
+                .frame(width: 20, height: 20)
+                .background(Circle().fill(Color.white.opacity(isHovered ? 0.22 : 0)))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
+        .onHover { isHovered = $0 }
+    }
+}
+
 /// A picture's row leads with the picture: "Image" alone says nothing about
 /// which one.
 private struct Thumbnail: View {
     let image: NSImage?
+    let file: URL?
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 5, style: .continuous)
@@ -277,6 +309,7 @@ private struct Thumbnail: View {
         .frame(width: 72, height: 44)
         .clipShape(shape)
         .overlay(shape.strokeBorder(Color.primary.opacity(0.12)))
+        .onDrag { file.flatMap(NSItemProvider.init(contentsOf:)) ?? NSItemProvider() }
     }
 }
 
