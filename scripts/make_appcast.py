@@ -18,16 +18,24 @@ import subprocess
 import sys
 
 
+# Commit types nobody updating an app wants to read about.
+INTERNAL = ("chore", "docs", "ci", "test", "build", "style", "refactor")
+
+
 def build_notes(notes_file: str | None) -> str:
-    """One commit subject per line -> an escaped <li> list. Escaping matters:
+    """One commit subject per line -> an escaped <li> list. Internal work is
+    left out and the conventional-commit prefix dropped: this list is read by
+    someone deciding whether to update, not by a developer. Escaping matters:
     commit messages are untrusted HTML the changelog renders verbatim."""
     items: list[str] = []
     if notes_file:
         with open(notes_file, encoding="utf-8") as handle:
             for line in handle:
-                line = line.strip()
-                if line:
-                    items.append(f"<li>{html.escape(line)}</li>")
+                kind, _, rest = line.strip().partition(": ")
+                if not rest or kind in INTERNAL:
+                    continue
+                note = rest[:1].upper() + rest[1:]
+                items.append(f"<li>{html.escape(note)}</li>")
     return "".join(items) or "<li>Maintenance and improvements.</li>"
 
 
