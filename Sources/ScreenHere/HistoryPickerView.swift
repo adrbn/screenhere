@@ -197,11 +197,10 @@ private struct HistoryRow: View {
                 Text(title)
                     .font(.system(size: 13))
                     .lineLimit(2)
-                    .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                    .foregroundStyle(isSelected ? Color.white : Color.primary)
                 Text(subtitle)
                     .font(.system(size: 10.5))
-                    .foregroundStyle(isSelected ? AnyShapeStyle(.white.opacity(0.75))
-                                                : AnyShapeStyle(.secondary))
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.75) : Color.secondary)
             }
             Spacer(minLength: 6)
             // Always here, even unseen: buttons that appear with the selection
@@ -220,7 +219,13 @@ private struct HistoryRow: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(isSelected ? AnyShapeStyle(Theme.brand) : AnyShapeStyle(.clear)))
+            .fill(Theme.brand)
+            .opacity(isSelected ? 1 : 0))
+        // The highlight fades between rows rather than jumping — barely long
+        // enough to take the edge off, since a list swept this fast cannot
+        // afford a highlight running after the pointer. Colour only, no
+        // movement: nothing here to drop under Reduce Motion.
+        .animation(.easeOut(duration: 0.044), value: isSelected)
         .contentShape(Rectangle())
         .onTapGesture(perform: onChoose)
     }
@@ -286,28 +291,31 @@ private struct RowButton: View {
 }
 
 /// A picture's row leads with the picture: "Image" alone says nothing about
-/// which one.
+/// which one. The tile is square and always full — a picture fitted inside it
+/// would leave bands of empty space on every shape but one — and it can be
+/// dragged out into any app, since what is on disk is a real file.
 private struct Thumbnail: View {
     let image: NSImage?
     let file: URL?
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 5, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
         ZStack {
             shape.fill(Color.primary.opacity(0.06))
             if let image {
                 Image(nsImage: image)
                     .resizable()
                     .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
+                    .aspectRatio(contentMode: .fill)
             } else {
                 Image(systemName: "photo")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(width: 72, height: 44)
+        .frame(width: 44, height: 44)
         .clipShape(shape)
+        // Kept: a white screenshot would otherwise bleed into the panel.
         .overlay(shape.strokeBorder(Color.primary.opacity(0.12)))
         .onDrag { file.flatMap(NSItemProvider.init(contentsOf:)) ?? NSItemProvider() }
     }
@@ -333,7 +341,7 @@ private struct LinkTile: View {
             } else {
                 Image(systemName: visited ? "globe" : "lock")
                     .font(.system(size: 12))
-                    .foregroundStyle(isSelected ? AnyShapeStyle(.white.opacity(0.8)) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.8) : Color.secondary)
             }
         }
         .frame(width: 28, height: 28)
