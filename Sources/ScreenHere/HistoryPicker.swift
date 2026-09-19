@@ -12,6 +12,8 @@ final class HistoryPicker: NSObject, NSWindowDelegate {
     static let shared = HistoryPicker()
 
     private var panel: NSPanel?
+    /// Watches for a click anywhere else on the Mac while the list is up.
+    private var outsideClicks: Any?
     private static let size = NSSize(width: 540, height: 420)
 
     var isShown: Bool { panel?.isVisible == true }
@@ -64,9 +66,24 @@ final class HistoryPicker: NSObject, NSWindowDelegate {
         }
         panel.makeKeyAndOrderFront(nil)
         self.panel = panel
+
+        // Losing the keyboard is not enough to know the user clicked away:
+        // the menu bar, the desktop and other apps' floating panels take a
+        // click without taking the key window, and the list would stay up
+        // over whatever they meant to reach. Clicks on the list itself are
+        // delivered to ScreenHere, so this never sees them.
+        outsideClicks = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.close() }
+        }
     }
 
     func close() {
+        if let outsideClicks {
+            NSEvent.removeMonitor(outsideClicks)
+            self.outsideClicks = nil
+        }
         guard let panel else { return }
         panel.delegate = nil
         panel.orderOut(nil)
