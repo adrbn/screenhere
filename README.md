@@ -7,10 +7,11 @@
 
 # ScreenHere
 
-### ⇧⌘3 captures the screen you're looking at.
+### The three screen shortcuts macOS is missing.
 
-On a Mac with more than one display, the screenshot shortcut finally takes the screen under your pointer.<br/>
-Plus two more: copy the text on your screen, and bring back what you copied earlier.
+<kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> copies any text you can see but can't select.<br/>
+<kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures the screen under your pointer, not both of them.<br/>
+<kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> brings back anything you copied earlier.
 
 <br/>
 
@@ -57,7 +58,9 @@ ScreenHere takes over the shortcut you already use and captures only the display
   <img src="docs/assets/text-light.png" width="760" alt="A selection dragged over a Wi-Fi password in a shared screen, and a confirmation that 7 words were copied" />
 </picture>
 
-Drag over text you can see but can't select: a shared screen, a video, a photo, an error dialog. The text lands on your clipboard.
+Drag over text you can see but can't select: a Wi-Fi password on someone's shared screen, a slide in a call, a paused video, a photo of a page, an error dialog that won't let you copy its own message. The text lands on your clipboard, ready to paste.
+
+It reads on your Mac, with Apple's own text recognition — nothing is uploaded, and it works with no network at all. Press the shortcut again on the same spot and you get the same text, in any of the languages macOS recognises.
 
 ### ⇧⌘8 · Everything you copied, one shortcut away
 
