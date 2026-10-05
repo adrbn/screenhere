@@ -199,4 +199,80 @@ final class ClipboardHistoryTests: XCTestCase {
         let data = try JSONEncoder().encode(history)
         XCTAssertEqual(try JSONDecoder().decode(ClipboardHistory.self, from: data), history)
     }
+
+    // MARK: Copied files
+
+    private func files(_ paths: String...) -> [ClipFile] {
+        paths.map { ClipFile(path: $0) }
+    }
+
+    func testCopiedFilesAreKeptAsOneItem() {
+        let history = ClipboardHistory.empty
+            .adding(files: files("/tmp/a.pdf", "/tmp/b.png"), source: "Finder", at: t0)
+        XCTAssertEqual(history.items.count, 1)
+        XCTAssertEqual(history.items.first?.files?.map(\.name), ["a.pdf", "b.png"])
+    }
+
+    /// The same selection copied again moves back to the top; a different one
+    /// is its own entry, even when the files overlap.
+    func testCopyingTheSameFilesAgainMovesToTheTop() {
+        let history = ClipboardHistory.empty
+            .adding(files: files("/tmp/a.pdf"), source: nil, at: t0)
+            .adding("text", source: nil, at: t0.addingTimeInterval(1))
+            .adding(files: files("/tmp/a.pdf"), source: nil, at: t0.addingTimeInterval(2))
+            .adding(files: files("/tmp/a.pdf", "/tmp/b.png"), source: nil, at: t0.addingTimeInterval(3))
+        XCTAssertEqual(history.items.count, 3)
+        XCTAssertEqual(history.items.first?.files?.count, 2)
+        XCTAssertEqual(history.items[1].files?.count, 1)
+    }
+
+    func testCopyingNoFileAtAllChangesNothing() {
+        XCTAssertTrue(ClipboardHistory.empty.adding(files: [], source: nil, at: t0).items.isEmpty)
+    }
+
+    /// Searching finds a file by its name and by the folder it came from.
+    func testFilesAreFoundByPath() {
+        let history = ClipboardHistory.empty
+            .adding(files: files("/Users/x/Downloads/Report 2026.pdf"), source: "Finder", at: t0)
+        XCTAssertEqual(history.matching("report").count, 1)
+        XCTAssertEqual(history.matching("downloads pdf").count, 1)
+        XCTAssertEqual(history.matching("invoice").count, 0)
+    }
+
+    func testFilesRoundTripThroughJSON() throws {
+        let history = ClipboardHistory.empty
+            .adding(files: files("/tmp/a.pdf", "/tmp/b.png"), source: "Finder", at: t0)
+        let data = try JSONEncoder().encode(history)
+        XCTAssertEqual(try JSONDecoder().decode(ClipboardHistory.self, from: data), history)
+    }
+}
+
+/// How a copied file reads in the list: its name, and the folder it sits in
+/// with the home folder written the way the Finder does.
+final class ClipFileTests: XCTestCase {
+
+    func testNameAndFolder() {
+        let file = ClipFile(path: "/Users/x/Downloads/Report.pdf")
+        XCTAssertEqual(file.name, "Report.pdf")
+        XCTAssertEqual(file.folder, "/Users/x/Downloads")
+    }
+
+    func testTheHomeFolderIsWrittenAsATilde() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        XCTAssertEqual(ClipFile(path: home + "/Desktop/note.txt").folder, "~/Desktop")
+        XCTAssertEqual(ClipFile(path: home + "/note.txt").folder, "~")
+    }
+
+    /// Another user's home is not this one's: the prefix must not match halfway
+    /// through a folder name either.
+    func testOtherPathsAreLeftAlone() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        XCTAssertEqual(ClipFile(path: home + "2/note.txt").folder, home + "2")
+        XCTAssertEqual(ClipFile(path: "/Volumes/Disk/note.txt").folder, "/Volumes/Disk")
+    }
+
+    func testAMissingFileIsNotThere() {
+        XCTAssertFalse(ClipFile(path: "/tmp/screenhere-no-such-file-\(UUID().uuidString)").exists)
+        XCTAssertTrue(ClipFile(path: NSTemporaryDirectory()).exists)
+    }
 }

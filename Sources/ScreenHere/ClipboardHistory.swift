@@ -20,11 +20,33 @@ struct ClipImage: Codable, Hashable, Sendable {
     let byteCount: Int
 }
 
+/// A copied file, kept as a reference: its bytes stay where they are, so an
+/// entry can outlive the file it points at — and point at it again when an
+/// unplugged disk comes back.
+struct ClipFile: Codable, Hashable, Sendable {
+    let path: String
+
+    var url: URL { URL(fileURLWithPath: path) }
+    var name: String { url.lastPathComponent }
+
+    /// The folder it sits in, the home folder written as "~".
+    var folder: String {
+        let folder = url.deletingLastPathComponent().path
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        guard folder == home || folder.hasPrefix(home + "/") else { return folder }
+        return "~" + folder.dropFirst(home.count)
+    }
+
+    var exists: Bool { FileManager.default.fileExists(atPath: path) }
+}
+
 /// One thing the user copied.
 struct ClipItem: Codable, Equatable, Identifiable {
     enum Content: Codable, Equatable {
         case text(String)
         case image(ClipImage)
+        /// Everything one copy took, in the order the Finder gave them.
+        case files([ClipFile])
     }
 
     let id: UUID
@@ -75,6 +97,11 @@ struct ClipItem: Codable, Equatable, Identifiable {
         if case .image(let image) = content { return image }
         return nil
     }
+
+    var files: [ClipFile]? {
+        if case .files(let files) = content { return files }
+        return nil
+    }
 }
 
 /// Everything copied while history is on, newest first. A value type: every
@@ -108,6 +135,13 @@ struct ClipboardHistory: Codable, Equatable {
         guard image.byteCount <= Self.maxImageBytes else { return self }
         let item = ClipItem(id: id, content: .image(image), date: date, source: source)
         return ClipboardHistory(items: [item] + items.filter { $0.image?.digest != image.digest }).trimmed()
+    }
+
+    /// Files cost nothing but their addresses: no budget, no size limit.
+    func adding(files: [ClipFile], source: String?, at date: Date, id: UUID = UUID()) -> ClipboardHistory {
+        guard !files.isEmpty else { return self }
+        let item = ClipItem(id: id, content: .files(files), date: date, source: source)
+        return ClipboardHistory(items: [item] + items.filter { $0.files != files }).trimmed()
     }
 
     func removing(_ id: UUID) -> ClipboardHistory {
@@ -152,11 +186,13 @@ struct ClipboardHistory: Codable, Equatable {
     }
 
     /// Pictures have no words of their own: they are found as "image" or by
-    /// the app they came from.
+    /// the app they came from. Files are found by their whole path, so a
+    /// folder's name finds everything copied out of it.
     private static func searchableText(_ item: ClipItem) -> String {
         switch item.content {
         case .text(let text): return text
         case .image(let image): return "image \(image.width)×\(image.height) \(item.source ?? "")"
+        case .files(let files): return "\(files.map(\.path).joined(separator: " ")) \(item.source ?? "")"
         }
     }
 

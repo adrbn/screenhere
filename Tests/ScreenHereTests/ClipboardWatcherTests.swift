@@ -7,6 +7,7 @@ final class FakePasteboard: PasteboardReading {
     var types: [String] = []
     var string: String?
     var data: [String: Data] = [:]
+    var fileURLs: [URL] = []
     private(set) var stringReads = 0
     private(set) var dataReads = 0
 
@@ -19,6 +20,8 @@ final class FakePasteboard: PasteboardReading {
         dataReads += 1
         return data[type]
     }
+
+    func currentFileURLs() -> [URL] { fileURLs }
 
     func copy(_ text: String, types: [String] = ["public.utf8-plain-text"]) {
         changeCount += 1
@@ -33,6 +36,16 @@ final class FakePasteboard: PasteboardReading {
         types = [type] + extraTypes
         string = text
         data = [type: bytes]
+    }
+
+    /// A copy from the Finder: the files, their paths as text, and the icon
+    /// the Finder draws them with.
+    func copyFiles(_ urls: [URL]) {
+        changeCount += 1
+        types = ["public.file-url", "NSFilenamesPboardType", "public.tiff", "public.utf8-plain-text"]
+        string = urls.map(\.path).joined(separator: "\n")
+        data = ["public.tiff": Data([9])]
+        fileURLs = urls
     }
 }
 
@@ -135,9 +148,20 @@ final class ClipboardWatcherTests: XCTestCase {
         XCTAssertEqual(copies, [.image(Data([7]), type: "public.tiff")])
     }
 
-    /// Copying a file in Finder puts its icon on the pasteboard; that icon is
-    /// not a picture the user copied.
-    func testAFinderFileCopyIsNotAnImage() {
+    /// A copy from the Finder carries the files' icon and their paths as text;
+    /// neither is what the user copied.
+    func testAFinderFileCopyIsRecordedAsItsFiles() {
+        let pb = FakePasteboard()
+        let w = watcher(pb)
+        let urls = [URL(fileURLWithPath: "/tmp/a.pdf"), URL(fileURLWithPath: "/tmp/b.png")]
+        pb.copyFiles(urls)
+        w.poll()
+        XCTAssertEqual(copies, [.files(urls)])
+    }
+
+    /// Without the addresses themselves there is nothing to keep: the icon is
+    /// not the copy.
+    func testAFileCopyWithoutAddressesIsNotRead() {
         let pb = FakePasteboard()
         let w = watcher(pb)
         pb.copyImage(Data([5]), type: "public.tiff", extraTypes: ["public.file-url"])
@@ -172,6 +196,13 @@ final class PasteboardFilterTests: XCTestCase {
     func testImagesAreRecorded() {
         XCTAssertEqual(PasteboardFilter.kind(of: ["public.tiff", "public.png"]), .image(type: "public.png"))
         XCTAssertEqual(PasteboardFilter.kind(of: ["public.jpeg"]), .image(type: "public.jpeg"))
+    }
+
+    /// Files win over the text and the icon the Finder puts beside them.
+    func testFilesAreRecordedAsFiles() {
+        XCTAssertEqual(PasteboardFilter.kind(of: ["public.file-url", "public.utf8-plain-text", "public.tiff"]), .files)
+        XCTAssertEqual(PasteboardFilter.kind(of: ["NSFilenamesPboardType"]), .files)
+        XCTAssertNil(PasteboardFilter.kind(of: ["public.file-url", "org.nspasteboard.ConcealedType"]))
     }
 
     func testUnknownContentIsNot() {

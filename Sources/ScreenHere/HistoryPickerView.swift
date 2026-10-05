@@ -5,6 +5,7 @@ struct HistoryPickerView: View {
     @ObservedObject var model: HistoryPickerModel
     @ObservedObject var clipboard: ClipboardController
     @ObservedObject var links: LinkPreviewController
+    @ObservedObject var filePictures: FileThumbnails
 
     var body: some View {
         let results = model.results
@@ -58,9 +59,11 @@ struct HistoryPickerView: View {
                 LazyVStack(spacing: 2) {
                     ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
                         let link = links.isEnabled ? item.text.flatMap(CopiedLink.init(text:)) : nil
+                        let copied = item.files?.first
                         HistoryRow(item: item,
                                    thumbnail: item.image.flatMap(clipboard.thumbnail(for:)),
                                    file: item.image.map(clipboard.fileURL(for:)),
+                                   filePicture: copied.flatMap(filePictures.thumbnail(for:)),
                                    link: link,
                                    linkPreview: link.flatMap(links.preview(for:)),
                                    isSelected: index == model.selection,
@@ -69,7 +72,10 @@ struct HistoryPickerView: View {
                                    onRemove: { model.remove(item) })
                             .id(item.id)
                             .onHover { if $0 { model.selection = index } }
-                            .onAppear { if let link { links.want(link) } }
+                            .onAppear {
+                                if let link { links.want(link) }
+                                if let copied { filePictures.want(copied) }
+                            }
                     }
                 }
                 .padding(6)
@@ -178,6 +184,8 @@ private struct HistoryRow: View {
     let thumbnail: NSImage?
     /// The picture on disk, set for a picture's row.
     let file: URL?
+    /// Quick Look's picture of the copied file, once it has one.
+    let filePicture: NSImage?
     /// Set only while link previews are on.
     let link: CopiedLink?
     let linkPreview: LinkPreviewController.Shown?
@@ -187,9 +195,11 @@ private struct HistoryRow: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(alignment: item.image == nil && link == nil ? .top : .center, spacing: 10) {
+        HStack(alignment: item.image == nil && item.files == nil && link == nil ? .top : .center, spacing: 10) {
             if item.image != nil {
                 Thumbnail(image: thumbnail, file: file)
+            } else if let copied = item.files?.first {
+                FileTile(picture: filePicture, file: copied, missing: missing)
             } else if let link {
                 LinkTile(icon: linkPreview?.icon, visited: link.mayVisit, isSelected: isSelected)
             }
@@ -202,6 +212,9 @@ private struct HistoryRow: View {
                     .font(.system(size: 10.5))
                     .foregroundStyle(isSelected ? Color.white.opacity(0.75) : Color.secondary)
             }
+            // A file that has moved is still listed — the disk it was on may
+            // come back — but it reads as out of reach.
+            .opacity(missing ? 0.5 : 1)
             Spacer(minLength: 6)
             // Always here, even unseen: buttons that appear with the selection
             // would narrow the text, rewrap it, and push every row below.
@@ -230,6 +243,12 @@ private struct HistoryRow: View {
         .onTapGesture(perform: onChoose)
     }
 
+    /// Nothing the row points at is on this Mac any more.
+    private var missing: Bool {
+        guard let files = item.files else { return false }
+        return files.allSatisfy { !$0.exists }
+    }
+
     /// A link reads as its page's title once there is one, and as its address
     /// without the scheme until then.
     private var title: String {
@@ -239,6 +258,7 @@ private struct HistoryRow: View {
 
     /// Under a page title, the site it is on.
     private var subtitle: String {
+        if missing { return "Missing · \(Self.subtitle(item))" }
         guard let link, linkPreview?.title != nil else { return Self.subtitle(item) }
         return "\(link.host) · \(Self.subtitle(item))"
     }
@@ -246,8 +266,15 @@ private struct HistoryRow: View {
     /// Runs of whitespace collapse so a copied paragraph previews as text, not
     /// as a column of blank lines.
     static func title(_ item: ClipItem) -> String {
-        guard let text = item.text else { return "Image" }
-        return text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        switch item.content {
+        case .text(let text):
+            return text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        case .image:
+            return "Image"
+        case .files(let files):
+            guard let first = files.first else { return "Files" }
+            return files.count == 1 ? first.name : "\(first.name) + \(files.count - 1) more"
+        }
     }
 
     /// English, like the rest of the interface — a French "il y a 5 min" in
@@ -262,7 +289,8 @@ private struct HistoryRow: View {
     static func subtitle(_ item: ClipItem) -> String {
         let when = relative.localizedString(for: item.date, relativeTo: Date())
         let size = item.image.map { "\($0.width) × \($0.height)" }
-        return [size, item.source, when].compactMap { $0 }.joined(separator: " · ")
+        let folder = item.files?.first?.folder
+        return [size, folder, item.source, when].compactMap { $0 }.joined(separator: " · ")
     }
 }
 
@@ -318,6 +346,39 @@ private struct Thumbnail: View {
         // Kept: a white screenshot would otherwise bleed into the panel.
         .overlay(shape.strokeBorder(Color.primary.opacity(0.12)))
         .onDrag { file.flatMap(NSItemProvider.init(contentsOf:)) ?? NSItemProvider() }
+    }
+}
+
+/// A file's row leads with Quick Look's picture of it — the first page of a
+/// PDF, the photo itself — and with the file type's icon when there is nothing
+/// to preview. The file can be dragged out of the list into any app, since
+/// what the row points at is the real file, wherever the user left it.
+private struct FileTile: View {
+    let picture: NSImage?
+    let file: ClipFile
+    let missing: Bool
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+        ZStack {
+            shape.fill(Color.primary.opacity(0.06))
+            if let picture {
+                Image(nsImage: picture)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(3)
+            } else {
+                Image(systemName: "doc")
+                    .font(.system(size: 16, weight: .light))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 44, height: 44)
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Color.primary.opacity(0.12)))
+        .opacity(missing ? 0.4 : 1)
+        .onDrag { missing ? NSItemProvider() : NSItemProvider(contentsOf: file.url) ?? NSItemProvider() }
     }
 }
 

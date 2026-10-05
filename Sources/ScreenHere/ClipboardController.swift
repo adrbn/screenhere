@@ -78,8 +78,9 @@ final class ClipboardController: ObservableObject {
         if isEnabled { apply(history.adding(text, source: source, at: Date())) }
     }
 
-    /// Puts an item back on the clipboard. False when its picture is gone from
-    /// disk, in which case the item leaves the history too.
+    /// Puts an item back on the clipboard. False when what it points at is
+    /// gone from disk: a missing picture takes its item with it, a missing
+    /// file does not — an unplugged disk comes back, and its row says so.
     @discardableResult
     func copy(_ item: ClipItem) -> Bool {
         switch item.content {
@@ -95,6 +96,17 @@ final class ClipboardController: ObservableObject {
             tiffProvider = PasteboardImageWriter.write(data, format: image.format, to: pasteboard)
             watcher.ignore(changeCount: pasteboard.changeCount)
             if isEnabled { apply(history.adding(image: image, source: item.source, at: Date())) }
+            return true
+        case .files(let files):
+            // Whatever is still there: two files copied, one deleted since,
+            // and the one left is better than nothing.
+            let present = files.filter(\.exists)
+            guard !present.isEmpty else { return false }
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.writeObjects(present.map { $0.url as NSURL })
+            watcher.ignore(changeCount: pasteboard.changeCount)
+            if isEnabled { apply(history.adding(files: files, source: item.source, at: Date())) }
             return true
         }
     }
@@ -135,6 +147,7 @@ final class ClipboardController: ObservableObject {
         history = .empty
         store.delete()
         thumbnails.removeAllObjects()
+        FileThumbnails.shared.clear()
         LinkPreviewController.shared.clear()
         let images = self.images
         imageQueue.async { images.deleteAll() }
@@ -165,6 +178,8 @@ final class ClipboardController: ObservableObject {
         switch copied {
         case .text(let text):
             apply(history.adding(text, source: source, at: Date()))
+        case .files(let urls):
+            apply(history.adding(files: urls.map { ClipFile(path: $0.path) }, source: source, at: Date()))
         case .image(let data, let type):
             let images = self.images
             let generation = self.generation

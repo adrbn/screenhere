@@ -33,7 +33,7 @@ struct PanelTiles: View {
                         detail: clipboard.isEnabled && text.historyUnavailable
                             ? .warning("Shortcut in use") : .keys("⇧⌘8"),
                         isOn: clipboard.isEnabled,
-                        help: "Keep what you copy, text and images, on this Mac, up to 100 MB of images. "
+                        help: "Keep what you copy — text, images, files — on this Mac, up to 100 MB of images. "
                             + "Password managers' copies are skipped.") {
                 clipboard.setEnabled(!clipboard.isEnabled)
                 text.rebind()

@@ -31,7 +31,9 @@ final class HistoryPicker: NSObject, NSWindowDelegate {
             if copied {
                 Toast.show("Copied — paste with ⌘V", systemImage: "doc.on.clipboard")
             } else {
-                Toast.show("That image is no longer on this Mac", systemImage: "exclamationmark.triangle")
+                Toast.show(item.files == nil ? "That image is no longer on this Mac"
+                                             : "That file is no longer on this Mac",
+                           systemImage: "exclamationmark.triangle")
             }
         }
         model.onSave = { item in
@@ -48,7 +50,7 @@ final class HistoryPicker: NSObject, NSWindowDelegate {
         let panel = KeyablePanel(contentRect: NSRect(origin: .zero, size: Self.size),
                                  styleMask: [.borderless, .nonactivatingPanel],
                                  backing: .buffered, defer: false)
-        panel.contentView = FixedHosting.view(HistoryPickerView(model: model, clipboard: .shared, links: .shared), size: Self.size)
+        panel.contentView = FixedHosting.view(HistoryPickerView(model: model, clipboard: .shared, links: .shared, filePictures: .shared), size: Self.size)
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true

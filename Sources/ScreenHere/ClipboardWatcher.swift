@@ -6,12 +6,18 @@ protocol PasteboardReading: AnyObject {
     func currentTypes() -> [String]
     func currentString() -> String?
     func currentData(forType type: String) -> Data?
+    func currentFileURLs() -> [URL]
 }
 
 extension NSPasteboard: PasteboardReading {
     func currentTypes() -> [String] { (types ?? []).map(\.rawValue) }
     func currentString() -> String? { string(forType: .string) }
     func currentData(forType type: String) -> Data? { data(forType: PasteboardType(type)) }
+
+    func currentFileURLs() -> [URL] {
+        let options: [ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        return readObjects(forClasses: [NSURL.self], options: options) as? [URL] ?? []
+    }
 }
 
 /// One copy, as the history takes it.
@@ -19,6 +25,8 @@ enum Copied: Equatable {
     case text(String)
     /// The picture's bytes as copied, and the pasteboard type they came as.
     case image(Data, type: String)
+    /// Where the copied files are; their bytes stay there.
+    case files([URL])
 }
 
 /// Which copies belong in the history, and as what.
@@ -26,6 +34,7 @@ enum PasteboardFilter {
     enum Kind: Equatable {
         case text
         case image(type: String)
+        case files
     }
 
     /// Markers password managers and similar apps put on copies that must not
@@ -49,11 +58,14 @@ enum PasteboardFilter {
     /// user copied.
     static let fileTypes: Set<String> = ["public.file-url", "NSFilenamesPboardType"]
 
-    /// Text first: a spreadsheet range or a rich-text selection carries a
-    /// picture of itself, and the words are what the user copied.
+    /// Files before text: a copy from the Finder carries the paths as text as
+    /// well, and the files are what the user copied. Then text, since a
+    /// spreadsheet range or a rich-text selection carries a picture of itself
+    /// and the words are what the user copied.
     static func kind(of types: [String]) -> Kind? {
         let set = Set(types)
         guard set.isDisjoint(with: privateMarkers) else { return nil }
+        if !set.isDisjoint(with: fileTypes) { return .files }
         if !set.isDisjoint(with: textTypes) { return .text }
         return imageType(in: set).map { .image(type: $0) }
     }
@@ -134,6 +146,9 @@ final class ClipboardWatcher {
 
     private func read(_ kind: PasteboardFilter.Kind, types: [String]) -> Copied? {
         switch kind {
+        case .files:
+            let urls = pasteboard.currentFileURLs()
+            return urls.isEmpty ? nil : .files(urls)
         case .image(let type):
             return pasteboard.currentData(forType: type).map { .image($0, type: type) }
         case .text:
