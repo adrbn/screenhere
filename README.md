@@ -34,22 +34,13 @@
 
 ## The problem
 
-With two displays, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures both. If your screenshots go to the clipboard, macOS keeps only the main display, even when you were working on the other one. The workaround is <kbd>⇧</kbd><kbd>⌘</kbd><kbd>5</kbd> and a click on the right screen, every single time.
+Text on your screen is often text you can't select — a shared screen in a call, a paused video, a photo of a page, an error dialog that won't even let you copy its own message. So you retype it by hand.
 
-ScreenHere takes over the shortcut you already use and captures only the display your pointer is on. Your destination, file format and shutter sound stay exactly as macOS has them. There is nothing new to learn.
+And with two displays, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures both. If your screenshots go to the clipboard, macOS keeps only the main display, even when you were working on the other one. The workaround is <kbd>⇧</kbd><kbd>⌘</kbd><kbd>5</kbd> and a click on the right screen, every single time.
+
+ScreenHere takes over the shortcuts you already use: <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> turns anything on screen into text on your clipboard, and <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures only the display your pointer is on. Your destination, file format and shutter sound stay exactly as macOS has them. There is nothing new to learn.
 
 ## Three shortcuts
-
-### ⇧⌘3 · The screen under your pointer
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/capture-dark.png">
-  <img src="docs/assets/capture-light.png" width="760" alt="Two displays: the main one is left alone, the one under the pointer is captured and its preview appears in its corner" />
-</picture>
-
-<kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> sends it straight to the clipboard. Turn on **Preview on captured screen** and the thumbnail shows up on the screen you captured, not wherever macOS decides.
-
-**Only the window?** Turn on **Window** in the menu (it's a beta), then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd>: you get the window under your pointer instead of the whole screen, and <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd> copies it. Rather use another shortcut? Click **⇧⌘2** next to **Window shortcut** and press yours.
 
 ### ⇧⌘7 · Copy the text on your screen
 
@@ -61,6 +52,17 @@ ScreenHere takes over the shortcut you already use and captures only the display
 Drag over text you can see but can't select: a Wi-Fi password on someone's shared screen, a slide in a call, a paused video, a photo of a page, an error dialog that won't let you copy its own message. The text lands on your clipboard, ready to paste.
 
 It reads on your Mac, with Apple's own text recognition — nothing is uploaded, and it works with no network at all. Press the shortcut again on the same spot and you get the same text, in any of the languages macOS recognises.
+
+### ⇧⌘3 · The screen under your pointer
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/capture-dark.png">
+  <img src="docs/assets/capture-light.png" width="760" alt="Two displays: the main one is left alone, the one under the pointer is captured and its preview appears in its corner" />
+</picture>
+
+<kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> sends it straight to the clipboard. Turn on **Preview on captured screen** and the thumbnail shows up on the screen you captured, not wherever macOS decides.
+
+**Only the window?** Turn on **Window** in the menu (it's a beta), then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd>: you get the window under your pointer instead of the whole screen, and <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd> copies it. Rather use another shortcut? Click **⇧⌘2** next to **Window shortcut** and press yours.
 
 ### ⇧⌘8 · Everything you copied, one shortcut away
 
