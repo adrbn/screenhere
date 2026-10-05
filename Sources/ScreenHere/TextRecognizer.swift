@@ -38,8 +38,13 @@ enum TextRecognizer {
     /// A capture's pixels, read in full: the file may be deleted before they
     /// are used.
     static func image(at file: URL) -> CGImage? {
-        guard let data = try? Data(contentsOf: file),
-              let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        guard let data = try? Data(contentsOf: file) else { return nil }
+        return image(from: data)
+    }
+
+    /// Nil when the bytes are not an image.
+    static func image(from data: Data) -> CGImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let options = [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
         return CGImageSourceCreateImageAtIndex(source, 0, options)
     }
