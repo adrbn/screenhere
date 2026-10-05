@@ -49,7 +49,7 @@ ScreenHere takes over the shortcuts you already use: <kbd>⇧</kbd><kbd>⌘</kbd
   <img src="docs/assets/text-light.png" width="760" alt="A selection dragged over a Wi-Fi password in a shared screen, and a confirmation that 7 words were copied" />
 </picture>
 
-Drag over text you can see but can't select: a Wi-Fi password on someone's shared screen, a slide in a call, a paused video, a photo of a page, an error dialog that won't let you copy its own message. The text lands on your clipboard, ready to paste.
+Drag over it and it's yours: a Wi-Fi password on someone's shared screen, a slide in a call, a serial number in a photo, a paragraph in a screenshot a colleague sent you. The text lands on your clipboard, ready to paste.
 
 It reads on your Mac, with Apple's own text recognition — nothing is uploaded, and it works with no network at all. Press the shortcut again on the same spot and you get the same text, in any of the languages macOS recognises.
 
