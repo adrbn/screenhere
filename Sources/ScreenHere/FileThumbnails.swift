@@ -37,5 +37,16 @@ final class FileThumbnails: ObservableObject {
     func clear() {
         ready = [:]
         asked = []
+        posed = false
+    }
+
+    /// Documentation shots only: pictures for files that are not on this Mac,
+    /// whose rows must still read as within reach.
+    private(set) var posed = false
+
+    func pose(_ pictures: [String: NSImage]) {
+        ready = pictures
+        asked = Set(pictures.keys)
+        posed = true
     }
 }

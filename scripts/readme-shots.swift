@@ -446,6 +446,25 @@ struct ReadmeShots {
                 return true
             }
         }
+        /// A page, for the posed picture Quick Look would make of a PDF.
+        func page(_ w: Int, _ h: Int) -> NSImage {
+            NSImage(size: NSSize(width: w, height: h), flipped: false) { r in
+                NSColor.white.setFill(); r.fill()
+                NSColor(white: 0.75, alpha: 1).setFill()
+                NSRect(x: r.width * 0.16, y: r.height * 0.74, width: r.width * 0.42, height: r.height * 0.05).fill()
+                NSColor(white: 0.86, alpha: 1).setFill()
+                for i in 0..<6 {
+                    NSRect(x: r.width * 0.16, y: r.height * (0.62 - Double(i) * 0.08),
+                           width: r.width * (i == 5 ? 0.38 : 0.68), height: r.height * 0.035).fill()
+                }
+                return true
+            }
+        }
+        let downloads = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
+        let copiedFiles = ["Harbor contract.pdf", "Site plan.png", "Invoice 2026-04.pdf"]
+            .map { ClipFile(path: downloads.appendingPathComponent($0).path) }
+        FileThumbnails.shared.pose([copiedFiles[0].path: page(140, 180)])
+
         let shot = ClipImage(digest: "shot", format: .png, width: 1680, height: 1050, byteCount: 2_100_000)
         let photo = ClipImage(digest: "photo", format: .jpeg, width: 1200, height: 1600, byteCount: 420_000)
         let history = ClipboardHistory.empty
@@ -455,6 +474,7 @@ struct ReadmeShots {
             .adding("https://github.com/adrbn/screenhere", source: "Safari", at: now.addingTimeInterval(-900))
             .adding("Sync moved to Thursday 10:00, room 4B.", source: "Mail", at: now.addingTimeInterval(-300))
             .adding(TextScene.selected, source: "ScreenHere", at: now.addingTimeInterval(-40))
+            .adding(files: copiedFiles, source: "Finder", at: now.addingTimeInterval(-25))
             .adding(image: shot, source: "ScreenHere", at: now.addingTimeInterval(-12))
         ClipboardController.shared.pose(history, enabled: true,
                                         thumbnails: ["shot": drawing(240, 150, 0.72), "photo": drawing(180, 240, 0.08)])
@@ -478,7 +498,8 @@ struct ReadmeShots {
             export(ShotHero(panel: panel, dark: dark), dark: dark, to: "\(out)/hero-\(name).png")
             export(CaptureScene(dark: dark), dark: dark, to: "\(out)/capture-\(name).png")
             export(TextScene(dark: dark), dark: dark, to: "\(out)/text-\(name).png")
-            let pickerImage = snapshot(HistoryPickerView(model: picker, clipboard: .shared, links: .shared),
+            let pickerImage = snapshot(HistoryPickerView(model: picker, clipboard: .shared, links: .shared,
+                                                         filePictures: .shared),
                                        width: 540, height: 420, dark: dark, background: .clear, key: false)
             export(HistoryScene(picker: pickerImage, dark: dark), dark: dark, to: "\(out)/history-\(name).png")
         }

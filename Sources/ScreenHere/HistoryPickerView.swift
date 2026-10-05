@@ -59,11 +59,13 @@ struct HistoryPickerView: View {
                 LazyVStack(spacing: 2) {
                     ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
                         let link = links.isEnabled ? item.text.flatMap(CopiedLink.init(text:)) : nil
-                        let copied = item.files?.first
+                        let copied = item.files
                         HistoryRow(item: item,
                                    thumbnail: item.image.flatMap(clipboard.thumbnail(for:)),
                                    file: item.image.map(clipboard.fileURL(for:)),
-                                   filePicture: copied.flatMap(filePictures.thumbnail(for:)),
+                                   filePicture: copied?.first.flatMap(filePictures.thumbnail(for:)),
+                                   fileMissing: !filePictures.posed
+                                       && copied?.allSatisfy { !$0.exists } == true,
                                    link: link,
                                    linkPreview: link.flatMap(links.preview(for:)),
                                    isSelected: index == model.selection,
@@ -74,7 +76,7 @@ struct HistoryPickerView: View {
                             .onHover { if $0 { model.selection = index } }
                             .onAppear {
                                 if let link { links.want(link) }
-                                if let copied { filePictures.want(copied) }
+                                if let first = copied?.first { filePictures.want(first) }
                             }
                     }
                 }
@@ -186,6 +188,8 @@ private struct HistoryRow: View {
     let file: URL?
     /// Quick Look's picture of the copied file, once it has one.
     let filePicture: NSImage?
+    /// None of the copied files is on this Mac any more.
+    let fileMissing: Bool
     /// Set only while link previews are on.
     let link: CopiedLink?
     let linkPreview: LinkPreviewController.Shown?
@@ -199,7 +203,7 @@ private struct HistoryRow: View {
             if item.image != nil {
                 Thumbnail(image: thumbnail, file: file)
             } else if let copied = item.files?.first {
-                FileTile(picture: filePicture, file: copied, missing: missing)
+                FileTile(picture: filePicture, file: copied, missing: fileMissing)
             } else if let link {
                 LinkTile(icon: linkPreview?.icon, visited: link.mayVisit, isSelected: isSelected)
             }
@@ -214,7 +218,7 @@ private struct HistoryRow: View {
             }
             // A file that has moved is still listed — the disk it was on may
             // come back — but it reads as out of reach.
-            .opacity(missing ? 0.5 : 1)
+            .opacity(fileMissing ? 0.5 : 1)
             Spacer(minLength: 6)
             // Always here, even unseen: buttons that appear with the selection
             // would narrow the text, rewrap it, and push every row below.
@@ -243,12 +247,6 @@ private struct HistoryRow: View {
         .onTapGesture(perform: onChoose)
     }
 
-    /// Nothing the row points at is on this Mac any more.
-    private var missing: Bool {
-        guard let files = item.files else { return false }
-        return files.allSatisfy { !$0.exists }
-    }
-
     /// A link reads as its page's title once there is one, and as its address
     /// without the scheme until then.
     private var title: String {
@@ -258,7 +256,7 @@ private struct HistoryRow: View {
 
     /// Under a page title, the site it is on.
     private var subtitle: String {
-        if missing { return "Missing · \(Self.subtitle(item))" }
+        if fileMissing { return "Missing · \(Self.subtitle(item))" }
         guard let link, linkPreview?.title != nil else { return Self.subtitle(item) }
         return "\(link.host) · \(Self.subtitle(item))"
     }

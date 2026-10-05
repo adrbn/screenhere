@@ -12,11 +12,17 @@
 #
 # Notarization is optional here. Set NOTARY_PROFILE to a profile created with
 # `xcrun notarytool store-credentials` to have the DMG notarized and stapled.
+#
+# The release notes installed copies are offered come from the commit subjects
+# since the last tag. Set RELEASE_NOTES to a file of "type: sentence" lines to
+# write them for the people updating instead — a subject that reads as a
+# changelog to its author rarely reads as one to them.
 set -euo pipefail
 
 VERSION="${1:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 PLIST="Resources/Info.plist"
+RELEASE_NOTES="${RELEASE_NOTES:-}"
 DMG="build/ScreenHere.dmg"
 ZIP="build/ScreenHere.zip"
 SPARKLE_KEY=".secrets/sparkle_ed_private_key"
@@ -63,6 +69,9 @@ else
     echo "      so first-time downloaders get a Gatekeeper warning."
 fi
 
+[ -z "$RELEASE_NOTES" ] || [ -f "$RELEASE_NOTES" ] \
+    || die "RELEASE_NOTES points at '$RELEASE_NOTES', which is not a file"
+
 [ -f "$SPARKLE_KEY" ] || die "missing $SPARKLE_KEY - without it the appcast cannot be signed and no installed copy will ever accept this update"
 
 command -v gh >/dev/null || die "gh CLI not found"
@@ -104,8 +113,12 @@ echo "==> Signing the Sparkle appcast..."
 SIGN_UPDATE=$(find .build/artifacts -type f -name sign_update -not -path "*old_dsa*" | head -1)
 [ -x "$SIGN_UPDATE" ] || die "sign_update missing from .build/artifacts"
 
-git log --format=%s "$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo HEAD~10)..HEAD" \
-    > build/notes.txt 2>/dev/null || echo "Maintenance and improvements." > build/notes.txt
+if [ -n "$RELEASE_NOTES" ]; then
+    cp "$RELEASE_NOTES" build/notes.txt
+else
+    git log --format=%s "$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo HEAD~10)..HEAD" \
+        > build/notes.txt 2>/dev/null || echo "Maintenance and improvements." > build/notes.txt
+fi
 
 python3 scripts/make_appcast.py \
     --sign-update "$SIGN_UPDATE" --key-file "$SPARKLE_KEY" \
