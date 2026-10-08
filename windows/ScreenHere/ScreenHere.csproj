@@ -14,7 +14,7 @@
     <RootNamespace>ScreenHere</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\ScreenHere.ico</ApplicationIcon>
-    <Version>1.7.0</Version>
+    <Version>1.8.0</Version>
     <Product>ScreenHere</Product>
     <Description>ScreenHere</Description>
     <Copyright>MIT License</Copyright>

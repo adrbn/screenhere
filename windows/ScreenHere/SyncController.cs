@@ -432,6 +432,10 @@ internal sealed class SyncController
         Changed?.Invoke();
     }
 
+    /// A device was picked or typed, and is being reached: the panel says so
+    /// until the code shows, or a message says why it will not.
+    public bool IsReaching => pairing != null && Pending == null;
+
     /// Other devices can find and reach this PC. When they cannot — the usual
     /// case without an administrator — it is this PC that has to ask.
     public bool CanBeReached => listener != null;
@@ -457,6 +461,7 @@ internal sealed class SyncController
         if (!IsPairing || Pending != null || pairing != null) return;
         using var cancel = pairing = new CancellationTokenSource(TimeSpan.FromSeconds(90));
         var connected = false;
+        Changed?.Invoke();
         try
         {
             foreach (var address in Order(device.Addresses))
@@ -484,7 +489,7 @@ internal sealed class SyncController
             }
             if (!cancel.IsCancellationRequested)
             {
-                Toast.Show(connected ? $"{device.Name} is not asking to connect" : $"Couldn't reach {device.Name}", Glyph.Warning);
+                Toast.Show(connected ? $"Click Connect a device on {device.Name} too" : $"Couldn't reach {device.Name} from this network", Glyph.Warning);
             }
         }
         catch
@@ -493,11 +498,8 @@ internal sealed class SyncController
         finally
         {
             pairing = null;
-            if (Pending != null)
-            {
-                Pending = null;
-                Changed?.Invoke();
-            }
+            Pending = null;
+            Changed?.Invoke();
         }
     }
 

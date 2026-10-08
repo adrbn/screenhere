@@ -502,6 +502,12 @@ internal sealed class PanelWindow : Window
 
         if (sync.IsPairing)
         {
+            if (sync.IsReaching)
+            {
+                options.Children.Add(Row(Ui.Icon(Glyph.Search, 12), "Connecting…", trailing: Cancel()));
+                options.Children.Add(Hint("The code shows here as soon as the other device answers."));
+                return;
+            }
             var nearby = sync.Nearby;
             options.Children.Add(Row(Ui.Icon(Glyph.Search, 12), nearby.Count == 0 ? "Looking for devices…" : "Choose the device", trailing: Cancel()));
             foreach (var device in nearby)
@@ -533,6 +539,8 @@ internal sealed class PanelWindow : Window
 
     /// For the networks where the other device never shows up by itself: it
     /// says where it is, and that is typed here.
+    private string typedAddress = "";
+
     private FrameworkElement AddressField()
     {
         var field = new TextBox
@@ -549,7 +557,24 @@ internal sealed class PanelWindow : Window
         var placeholder = Ui.Text("Not listed? Type the address it shows", 12, null, "Secondary");
         placeholder.IsHitTestVisible = false;
         placeholder.Margin = new Thickness(2, 0, 0, 1);
-        field.TextChanged += (_, _) => placeholder.Visibility = field.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        // The rows are rebuilt on every change: what was typed outlives them.
+        field.Text = typedAddress;
+        placeholder.Visibility = typedAddress.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // A button as well as Enter: a field alone does not say what comes next.
+        var go = Ui.Press("Soft", Ui.Text("Connect", 11, FontWeights.Medium, "OnBrandInk"), () => SyncController.Shared.Pair(typedAddress));
+        go.Tag = new CornerRadius(5);
+        go.Height = 20;
+        go.Padding = new Thickness(8, 0, 8, 1);
+        go.SetResourceReference(BackgroundProperty, "Brand");
+        go.Visibility = typedAddress.Trim().Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+
+        field.TextChanged += (_, _) =>
+        {
+            typedAddress = field.Text;
+            placeholder.Visibility = field.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+            go.Visibility = field.Text.Trim().Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        };
         field.PreviewKeyDown += (_, e) =>
         {
             if (e.Key != System.Windows.Input.Key.Enter) return;
@@ -557,13 +582,14 @@ internal sealed class PanelWindow : Window
             SyncController.Shared.Pair(field.Text);
         };
 
-        var box = new Grid { Margin = new Thickness(8, 0, 0, 0) };
+        var box = new Grid { Margin = new Thickness(8, 0, 6, 0) };
         box.Children.Add(placeholder);
         box.Children.Add(field);
         var content = new DockPanel();
         content.Children.Add(new Grid { Width = 16, Children = { Ui.Icon(Glyph.Globe, 12) } }.Docked(Dock.Left));
+        content.Children.Add(go.Docked(Dock.Right));
         content.Children.Add(box);
-        var row = new Border { Height = 26, Padding = new Thickness(6, 0, 6, 0), CornerRadius = new CornerRadius(6), Child = content };
+        var row = new Border { Height = 26, Padding = new Thickness(6, 0, 3, 0), CornerRadius = new CornerRadius(6), Child = content };
         row.SetResourceReference(Border.BackgroundProperty, "P05");
         return new Border { Padding = new Thickness(0, 2, 0, 3), Child = row };
     }
