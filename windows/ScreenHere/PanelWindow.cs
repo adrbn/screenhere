@@ -87,6 +87,7 @@ internal sealed class PanelWindow : Window
         Features.Changed += Refresh;
         ClipboardController.Shared.Changed += Refresh;
         LinkPreviews.Shared.Changed += Refresh;
+        SyncController.Shared.Changed += Refresh;
         Updater.Shared.Changed += RefreshUpdate;
         // The pointer moves continuously, so the map would go stale the moment
         // the panel appeared. Polling is confined to the time the panel is on
@@ -103,6 +104,8 @@ internal sealed class PanelWindow : Window
             Features.Changed -= Refresh;
             ClipboardController.Shared.Changed -= Refresh;
             LinkPreviews.Shared.Changed -= Refresh;
+            SyncController.Shared.Changed -= Refresh;
+            SyncController.Shared.EndPairing();
             Updater.Shared.Changed -= RefreshUpdate;
             Features.EndRecording();
             if (current == this) current = null;
@@ -416,6 +419,8 @@ internal sealed class PanelWindow : Window
                 Refresh();
             })));
 
+        AddSharedClipboard();
+
         if (!clipboard.IsEnabled) return;
         options.Children.Add(Row(Ui.Icon(Glyph.Link, 12), "Link previews", beta: true,
             trailing: Switch(LinkPreviews.Shared.IsEnabled, LinkPreviews.Shared.SetEnabled,
@@ -435,6 +440,87 @@ internal sealed class PanelWindow : Window
             RefreshOptions();
         }));
     }
+
+    /// The clipboard shared with one other device, and the few steps that
+    /// introduce the two: ask on both, pick the device, check the code.
+    private void AddSharedClipboard()
+    {
+        var sync = SyncController.Shared;
+        options.Children.Add(Row(Ui.Icon(Glyph.Devices, 12), "Shared clipboard", beta: true,
+            trailing: Switch(sync.IsEnabled, sync.SetEnabled,
+                "Share what you copy — text and pictures — with a Mac or PC on the same network that also runs ScreenHere. "
+                + "The two talk to each other directly and encrypted; nothing goes through a server, and copies that "
+                + "password managers mark as private are never sent.")));
+        if (!sync.IsEnabled) return;
+
+        if (sync.Pending is { } offer)
+        {
+            // Asked in place, like clearing the history.
+            var question = new DockPanel { LastChildFill = false };
+            question.Children.Add(Ui.Text(offer.Code.Length == 6 ? $"{offer.Code[..3]} {offer.Code[3..]}" : offer.Code, 15, FontWeights.SemiBold, "BrandText")
+                .With(t => t.Margin = new Thickness(24, 0, 0, 1)).Docked(Dock.Left));
+            if (offer.Confirmed)
+            {
+                question.Children.Add(Ui.Text($"Waiting for {ShortName(offer.Name, 18)}…", 11, null, "Secondary").Docked(Dock.Right));
+            }
+            else
+            {
+                question.Children.Add(Ui.Press("Soft", Ui.Text("Connect", 11, FontWeights.Medium, "OnBrandInk"), sync.Confirm)
+                    .With(b =>
+                    {
+                        b.Tag = new CornerRadius(6);
+                        b.Height = 22;
+                        b.Padding = new Thickness(9, 0, 9, 1);
+                        b.SetResourceReference(BackgroundProperty, "Brand");
+                    }).Docked(Dock.Right));
+                question.Children.Add(Ui.Press("Footer", "Cancel", sync.Decline).With(b => b.Margin = new Thickness(0, 0, 4, 0)).Docked(Dock.Right));
+            }
+            options.Children.Add(Row(Ui.Icon(Glyph.Lock, 12), $"Same code on {ShortName(offer.Name, 20)}?"));
+            options.Children.Add(new Border { Height = 30, Padding = new Thickness(6, 0, 0, 0), Child = question });
+            return;
+        }
+
+        if (sync.IsPairing)
+        {
+            var nearby = sync.Nearby;
+            if (nearby.Count == 0)
+            {
+                options.Children.Add(Row(Ui.Icon(Glyph.Search, 12), "Looking for devices…", trailing: Cancel()));
+                options.Children.Add(Hint("Click Connect a device in ScreenHere on the other one too."));
+                return;
+            }
+            options.Children.Add(Row(Ui.Icon(Glyph.Search, 12), "Choose the device", trailing: Cancel()));
+            foreach (var device in nearby)
+            {
+                options.Children.Add(Row(Ui.Icon(Glyph.Display, 12), ShortName(device.Name, 30), action: () => sync.Pair(device)));
+            }
+            return;
+        }
+
+        if (sync.IsPaired)
+        {
+            var forget = Ui.Press("Footer", "Forget", sync.Forget, "Stop sharing with this device. It would have to be connected again.");
+            var state = Ui.Text(sync.IsConnected ? "Connected" : "Not in reach", 11, null, sync.IsConnected ? "BrandText" : "Secondary")
+                .With(t => t.Margin = new Thickness(0, 0, 4, 0));
+            var trailing = new StackPanel { Orientation = Orientation.Horizontal };
+            trailing.Children.Add(state);
+            trailing.Children.Add(forget);
+            options.Children.Add(Row(Ui.Icon(Glyph.Display, 12), ShortName(sync.PeerName ?? "Device", 18), trailing: trailing));
+        }
+        else
+        {
+            options.Children.Add(Row(Ui.Icon(Glyph.Link, 12), "Connect a device…", action: sync.BeginPairing));
+        }
+
+        UIElement Cancel() => Ui.Press("Footer", "Cancel", sync.EndPairing);
+    }
+
+    private static FrameworkElement Hint(string text) =>
+        Ui.Text(text, 10.5, null, "Secondary").With(t =>
+        {
+            t.TextWrapping = TextWrapping.Wrap;
+            t.Margin = new Thickness(30, 0, 8, 5);
+        });
 
     /// One row of the options: fixed icon column, title, optional trailing
     /// control or hint. Rows with an action highlight on hover; rows that only

@@ -1,0 +1,23 @@
+name: macOS
+
+on:
+  push:
+    branches: [main]
+    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Package.resolved', '.github/workflows/macos.yml']
+  pull_request:
+    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Package.resolved', '.github/workflows/macos.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: swift --version && sw_vers
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test

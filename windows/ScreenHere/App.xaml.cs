@@ -21,7 +21,23 @@ public partial class App : Application
         ("window", () => Capture.Window(toClipboard: false)),
         ("text", TextCapture.Run),
         ("history", HistoryWindow.Open),
+        // The shared clipboard, driven without its panel — only for a build
+        // being tried out under a profile of its own.
+        ("sync-on", () => Trying(() => SyncController.Shared.SetEnabled(true))),
+        ("sync-ask", () => Trying(SyncController.Shared.BeginPairing)),
+        ("sync-pick", () => Trying(() =>
+        {
+            SyncController.Shared.BeginPairing();
+            if (SyncController.Shared.Nearby.FirstOrDefault() is { } device) SyncController.Shared.Pair(device);
+        })),
+        ("sync-confirm", () => Trying(SyncController.Shared.Confirm)),
+        ("sync-status", () => Trying(() => File.WriteAllText(Path.Combine(Settings.Folder, "sync-status.txt"), SyncController.Shared.Describe()))),
     ];
+
+    private static void Trying(Action action)
+    {
+        if (Settings.Profile != null) action();
+    }
 
     /// A build tried out under its own profile runs beside the installed copy.
     private static string Scope => @"Local\ScreenHere" + (Settings.Profile is { } profile

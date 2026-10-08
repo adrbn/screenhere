@@ -24,6 +24,12 @@
 	<string>13.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_screenhere._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>ScreenHere finds your other Mac or PC on this network to share the clipboard with it. Only when Shared clipboard is on.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>MIT License. ScreenHere contributors.</string>
 	<key>NSPrincipalClass</key>
