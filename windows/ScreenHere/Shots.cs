@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -19,6 +20,9 @@ internal static class Shots
         IsRunning = true;
         Directory.CreateDirectory(folder);
         Pose();
+        Theme.Apply(false);
+        Render(DownloadButton("macOS"), Path.Combine(folder, "download-macos.png"));
+        Render(DownloadButton("Windows"), Path.Combine(folder, "download-windows.png"));
         foreach (var dark in new[] { true, false })
         {
             Theme.Apply(dark);
@@ -50,6 +54,41 @@ internal static class Shots
             Render(new Window { SizeToContent = SizeToContent.WidthAndHeight, Content = Toast.Build("Copied 7 words", Glyph.Paste) }
                 .With(w => Ui.Floating(w, activates: false)), Path.Combine(folder, $"toast-{suffix}.png"));
         }
+    }
+
+    /// The README's download buttons, one per platform and drawn alike, so
+    /// neither reads as the afterthought.
+    private static Window DownloadButton(string platform)
+    {
+        var arrow = Ui.Icon("", 11, null);
+        arrow.Foreground = new SolidColorBrush(Theme.Brand);
+        arrow.FontWeight = FontWeights.Bold;
+        var disc = new Grid { Width = 22, Height = 22, VerticalAlignment = VerticalAlignment.Center };
+        disc.Children.Add(new System.Windows.Shapes.Ellipse { Fill = Brushes.White });
+        disc.Children.Add(arrow);
+
+        var label = new TextBlock
+        {
+            Text = $"Download for {platform}", FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White,
+            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 1),
+        };
+        var content = new System.Windows.Controls.StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Center,
+        };
+        content.Children.Add(disc);
+        content.Children.Add(label);
+
+        var button = new System.Windows.Controls.Border
+        {
+            Width = 247, Height = 50, CornerRadius = new CornerRadius(12), Child = content,
+            Background = new LinearGradientBrush(Color.FromRgb(143, 100, 246), Theme.Brand, 90),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)), BorderThickness = new Thickness(1),
+        };
+        var window = new Window { SizeToContent = SizeToContent.WidthAndHeight, Content = button };
+        Ui.Floating(window, activates: false);
+        return window;
     }
 
     private static void Pose()

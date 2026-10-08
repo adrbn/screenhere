@@ -1,4 +1,4 @@
-﻿# Redraws the README's pictures of the Windows app, from posed data:
+# Redraws the README's pictures of the Windows app, from posed data:
 # no real display arrangement, no real clipboard.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -11,4 +11,5 @@ $assets = Join-Path (Split-Path $root -Parent) 'docs\assets'
 foreach ($name in 'panel', 'history') {
     foreach ($scheme in 'dark', 'light') { Copy-Item (Join-Path $shots "$name-$scheme.png") (Join-Path $assets "windows-$name-$scheme.png") -Force }
 }
+foreach ($name in 'download-macos', 'download-windows') { Copy-Item (Join-Path $shots "$name.png") (Join-Path $assets "$name.png") -Force }
 "Pictures written to $assets"

@@ -9,17 +9,17 @@
 
 ### The three screen shortcuts your Mac and your PC are missing.
 
-<kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> copies any text you can see but can't select.<br/>
-<kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures the screen under your pointer, not both of them.<br/>
-<kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> brings back anything you copied earlier.
+<kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> · <kbd>Win</kbd><kbd>Shift</kbd><kbd>7</kbd> copies any text you can see but can't select.<br/>
+<kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> · <kbd>Win</kbd><kbd>Shift</kbd><kbd>3</kbd> captures the screen under your pointer, not both of them.<br/>
+<kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> · <kbd>Win</kbd><kbd>Shift</kbd><kbd>8</kbd> brings back anything you copied earlier.
 
 <br/>
 
-<a href="https://github.com/adrbn/screenhere/releases/latest/download/ScreenHere.dmg"><img src="docs/assets/download.png" width="247" height="50" alt="Download for macOS" /></a>
+<a href="https://github.com/adrbn/screenhere/releases/latest/download/ScreenHere.dmg"><img src="docs/assets/download-macos.png" width="247" height="50" alt="Download for macOS" /></a>
+&nbsp;&nbsp;
+<a href="https://github.com/adrbn/screenhere/releases/latest/download/ScreenHere-Windows.exe"><img src="docs/assets/download-windows.png" width="247" height="50" alt="Download for Windows" /></a>
 
-<sub>macOS 13 or later · Signed and notarized · Free and open source</sub>
-
-**[Download for Windows](https://github.com/adrbn/screenhere/releases/latest/download/ScreenHere-Windows.exe)** · <sub>Windows 10 and 11 · the same shortcuts with <kbd>Win</kbd> for <kbd>⌘</kbd> · <a href="windows/README.md">what differs</a></sub>
+<sub>macOS 13 or later · Windows 10 and 11 · Free and open source</sub>
 
 [![Latest release](https://img.shields.io/github/v/release/adrbn/screenhere?label=release&color=7D4FF0)](https://github.com/adrbn/screenhere/releases/latest)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](https://github.com/adrbn/screenhere/releases/latest)
@@ -30,8 +30,14 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.png">
-  <img src="docs/assets/hero-light.png" width="470" alt="The ScreenHere menu open under its menu-bar icon: a live map of two displays with the one under the pointer highlighted, and a tile for each shortcut" />
+  <img src="docs/assets/hero-light.png" width="430" align="top" alt="ScreenHere on the Mac, open under its menu-bar icon: a live map of two displays with the one under the pointer highlighted, and a tile for each shortcut" />
 </picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/windows-panel-dark.png">
+  <img src="docs/assets/windows-panel-light.png" width="350" align="top" alt="ScreenHere on Windows: the same panel, with the same map, tiles and options" />
+</picture>
+
+<sub>The same panel on the Mac and on Windows.</sub>
 
 </div>
 
@@ -41,11 +47,13 @@ Text on your screen is often text you can't select — a shared screen in a call
 
 And with two displays, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures both. If your screenshots go to the clipboard, macOS keeps only the main display, even when you were working on the other one. The workaround is <kbd>⇧</kbd><kbd>⌘</kbd><kbd>5</kbd> and a click on the right screen, every single time.
 
-ScreenHere takes over the shortcuts you already use: <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> turns anything on screen into text on your clipboard, and <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures only the display your pointer is on. Your destination, file format and shutter sound stay exactly as macOS has them. There is nothing new to learn.
+The same goes for a PC: <kbd>PrtSc</kbd> captures every display side by side, in one very wide picture.
+
+ScreenHere takes over the shortcuts you already use: <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> turns anything on screen into text on your clipboard, and <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures only the display your pointer is on. On Windows they are the same keys with <kbd>Win</kbd> for <kbd>⌘</kbd>. Your destination, file format and shutter sound stay exactly as macOS has them. There is nothing new to learn.
 
 ## Three shortcuts
 
-### ⇧⌘7 · Copy the text on your screen
+### ⇧⌘7 · Win+Shift+7 · Copy the text on your screen
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/text-dark.png">
@@ -56,7 +64,7 @@ Drag over it and it's yours: a Wi-Fi password on someone's shared screen, a slid
 
 It reads on your Mac, with Apple's own text recognition — nothing is uploaded, and it works with no network at all. Press the shortcut again on the same spot and you get the same text, in any of the languages macOS recognises.
 
-### ⇧⌘3 · The screen under your pointer
+### ⇧⌘3 · Win+Shift+3 · The screen under your pointer
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/capture-dark.png">
@@ -67,7 +75,7 @@ It reads on your Mac, with Apple's own text recognition — nothing is uploaded,
 
 **Only the window?** Turn on **Window** in the menu (it's a beta), then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd>: you get the window under your pointer instead of the whole screen, and <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>2</kbd> copies it. Rather use another shortcut? Click **⇧⌘2** next to **Window shortcut** and press yours.
 
-### ⇧⌘8 · Everything you copied, one shortcut away
+### ⇧⌘8 · Win+Shift+8 · Everything you copied, one shortcut away
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/history-dark.png">
@@ -81,8 +89,8 @@ The last 200 things you copied — text, images, files — in a list under your 
 ## On Windows
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/windows-panel-dark.png">
-  <img src="docs/assets/windows-panel-light.png" width="368" alt="The ScreenHere panel on Windows: the same map of the displays, tiles and options as on the Mac" />
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/windows-history-dark.png">
+  <img src="docs/assets/windows-history-light.png" width="596" alt="The clipboard history on Windows: a searchable list of recently copied texts, files and images" />
 </picture>
 
 The same app, on Windows 10 and 11: <kbd>Win</kbd><kbd>Shift</kbd><kbd>3</kbd> for the screen under the pointer, <kbd>Win</kbd><kbd>Shift</kbd><kbd>2</kbd> for the window, <kbd>Win</kbd><kbd>Shift</kbd><kbd>7</kbd> for text and <kbd>Win</kbd><kbd>Shift</kbd><kbd>8</kbd> for the history, behind the same panel. Text is read by Windows' own recogniser, on your PC.
