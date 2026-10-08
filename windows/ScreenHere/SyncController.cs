@@ -30,16 +30,27 @@ internal sealed class SyncController
     public sealed record Offer(string Name, string Code, bool Confirmed);
 
     public bool IsEnabled { get; private set; }
-    public string? PeerName => Settings.Current.SyncPeerName;
-    public bool IsPaired => Settings.Current.SyncPeerId != null && peerKey != null;
-    public bool IsConnected => session != null;
+    public string? PeerName => posed?.Peer ?? Settings.Current.SyncPeerName;
+    public bool IsPaired => posed != null ? posed.Peer != null : Settings.Current.SyncPeerId != null && peerKey != null;
+    public bool IsConnected => posed?.Connected ?? session != null;
     /// The panel is asking to connect a device: this one can be seen and asked.
     public bool IsPairing { get; private set; }
     public Offer? Pending { get; private set; }
+    /// Documentation shots only: a state to show, with nothing behind it.
+    public sealed record Posed(string? Peer, bool Connected);
+    private Posed? posed;
+
+    public void Pose(bool enabled, Posed state, bool pairing = false, Offer? offer = null, params Found[] nearby)
+    {
+        (IsEnabled, posed, IsPairing, Pending) = (enabled, state, pairing, offer);
+        found.Clear();
+        foreach (var device in nearby) found[device.Id] = device;
+    }
+
     public IReadOnlyList<Found> Nearby => found.Values.Where(f => f.Id != DeviceId).OrderBy(f => f.Name).ToList();
     public event Action? Changed;
 
-    private static string DeviceId => Settings.Current.SyncDeviceId!;
+    private static string DeviceId => Settings.Current.SyncDeviceId ?? "";
     private static string DeviceName => Environment.MachineName;
 
     private readonly Dispatcher ui = Dispatcher.CurrentDispatcher;

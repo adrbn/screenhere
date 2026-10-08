@@ -476,7 +476,7 @@ internal sealed class PanelWindow : Window
                 question.Children.Add(Ui.Press("Footer", "Cancel", sync.Decline).With(b => b.Margin = new Thickness(0, 0, 4, 0)).Docked(Dock.Right));
             }
             options.Children.Add(Row(Ui.Icon(Glyph.Lock, 12), $"Same code on {ShortName(offer.Name, 20)}?"));
-            options.Children.Add(new Border { Height = 30, Padding = new Thickness(6, 0, 0, 0), Child = question });
+            options.Children.Add(new Border { Height = 30, Padding = new Thickness(6, 0, 6, 0), Child = question });
             return;
         }
 
