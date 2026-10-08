@@ -327,10 +327,31 @@ final class SyncController: ObservableObject {
 
     // MARK: - Introducing two devices
 
+    /// Whether the panel is on screen. Not published, and on purpose: the
+    /// menu sizes its window while it is open and not while it is closed, so
+    /// nothing the panel shows may change behind its back — rows that went
+    /// away while it was closed left it floating between two empty bands.
+    private var panelIsOpen = true
+    private var pairingSince = Date()
+
+    /// Connecting a device waits while the panel is closed: nothing is
+    /// answered, and nothing it shows changes.
+    func panelDidClose() {
+        panelIsOpen = false
+    }
+
+    /// And goes on when it is back — unless it was left for so long that
+    /// nobody is waiting on the other device any more.
+    func panelDidOpen() {
+        panelIsOpen = true
+        if isPairing, pending == nil, Date().timeIntervalSince(pairingSince) > 600 { endPairing() }
+    }
+
     /// While the panel is asking, this Mac answers a device that asks to be
     /// connected. The rest of the time it answers no one it does not know.
     func beginPairing() {
         guard isEnabled, !isPairing else { return }
+        pairingSince = Date()
         isPairing = true
     }
 
@@ -410,7 +431,7 @@ final class SyncController: ObservableObject {
     }
 
     private func answerPairing(_ wire: SyncWire, asked: SyncProtocol.Message) async {
-        guard isPairing, pending == nil, pairingWire == nil,
+        guard isPairing, panelIsOpen, pending == nil, pairingWire == nil,
               let id = asked.id, let commit = Data(base64Encoded: asked.commit ?? "") else {
             try? await wire.send(SyncProtocol.encode(.init(t: "no")))
             return wire.cancel()
