@@ -27,6 +27,26 @@ internal static class Shots
                 [new Rect(0, 0, 2560, 1440), new Rect(2560, 400, 1920, 1080)], ["Studio", "Built-in"], new Point(3400, 880))),
                 Path.Combine(folder, $"panel-{suffix}.png"));
             Render(new HistoryWindow(), Path.Combine(folder, $"history-{suffix}.png"));
+
+            // The shared clipboard, at each step of connecting two devices.
+            var sync = SyncController.Shared;
+            var mac = new SyncController.Found("mac", "Studio MacBook Air", [], 1);
+            var steps = new (string Name, Action Pose)[]
+            {
+                ("ask", () => sync.Pose(true, new(null, false))),
+                ("looking", () => sync.Pose(true, new(null, false), pairing: true)),
+                ("choose", () => sync.Pose(true, new(null, false), pairing: true, nearby: mac)),
+                ("code", () => sync.Pose(true, new(null, false), pairing: true, offer: new(mac.Name, "482743", false), nearby: mac)),
+                ("waiting", () => sync.Pose(true, new(null, false), pairing: true, offer: new(mac.Name, "482743", true), nearby: mac)),
+                ("connected", () => sync.Pose(true, new(mac.Name, true))),
+            };
+            foreach (var (name, pose) in steps)
+            {
+                pose();
+                Render(new PanelWindow(new PanelPose([new Rect(0, 0, 1920, 1080)], ["Display 1"], new Point(900, 500))),
+                       Path.Combine(folder, $"sync-{name}-{suffix}.png"));
+            }
+            sync.Pose(false, new(null, false));
             Render(new Window { SizeToContent = SizeToContent.WidthAndHeight, Content = Toast.Build("Copied 7 words", Glyph.Paste) }
                 .With(w => Ui.Floating(w, activates: false)), Path.Combine(folder, $"toast-{suffix}.png"));
         }

@@ -75,11 +75,13 @@ It reads on your Mac, with Apple's own text recognition — nothing is uploaded,
 
 The last 200 things you copied — text, images, files — in a list under your pointer. Type to filter, press <kbd>Return</kbd>, paste. Copied files are listed by name with a Quick Look preview, and <kbd>Return</kbd> puts them back on the clipboard for the Finder; a file moved since is greyed out rather than forgotten. A picture can also be dragged out into any app, or saved to your Downloads folder. Off until you turn it on.
 
+**Two computers?** Turn on **Shared clipboard** (a beta) on both, connect them once with a code, and what you copy on one is on the clipboard of the other — a Mac and a PC included. It stays on your network: [how it works](docs/SHARED-CLIPBOARD.md).
+
 ## Private by design
 
 - **Text is read on your Mac** by Apple's Vision framework. Nothing is uploaded.
 - **The history never leaves your Mac**, and only your account can read it. Anything a password manager marks as secret is never kept.
-- **No account, no analytics.** ScreenHere only goes online to check for updates, and to fetch link titles if you turn on that beta.
+- **No account, no analytics.** ScreenHere only goes online to check for updates, and to fetch link titles if you turn on that beta. The shared clipboard, if you turn it on, talks to your other device directly and encrypted, and never leaves your network.
 - **Open source**, so you can check all of this yourself.
 
 ## Install
@@ -137,6 +139,7 @@ Yes: click **⋯** in the menu, then **Hide Menu Bar Icon**. The shortcuts keep 
 ## More
 
 - [How it works](docs/HOW-IT-WORKS.md): borrowing the shortcut and giving it back, window capture, the capture preview, text recognition, the clipboard history and link previews.
+- [The shared clipboard (beta)](docs/SHARED-CLIPBOARD.md): one clipboard for a Mac and a PC on the same network, how to connect them, and what it does on your network.
 - [ScreenHere for Windows](windows/README.md): the same shortcuts on Windows 10 and 11, and what differs.
 - [Building from source](docs/BUILDING.md)
 - [Report a bug or ask for a feature](https://github.com/adrbn/screenhere/issues)

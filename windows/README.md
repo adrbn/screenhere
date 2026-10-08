@@ -34,7 +34,9 @@ No administrator rights, no account, nothing outside your user profile. ScreenHe
   <img src="../docs/assets/windows-history-light.png" width="596" alt="The clipboard history on Windows: a searchable list of recently copied texts, files and images" />
 </picture>
 
-The panel is the same as the Mac's: the map of your displays with the one under the pointer filled in, a tile that switches each feature on and off, and the options of whatever is on — **Preview on captured screen**, **Launch at login**, **Link previews** (beta).
+The panel is the same as the Mac's: the map of your displays with the one under the pointer filled in, a tile that switches each feature on and off, and the options of whatever is on — **Preview on captured screen**, **Launch at login**, **Shared clipboard** (beta), **Link previews** (beta).
+
+**Shared clipboard** gives this PC and a Mac — or another PC — one clipboard, on the same network and nowhere else: [how to connect them, and what it does](../docs/SHARED-CLIPBOARD.md).
 
 ## What is different from the Mac
 
