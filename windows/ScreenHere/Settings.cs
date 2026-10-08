@@ -20,6 +20,15 @@ internal sealed class Settings
     public bool PreviewOnCapturedScreen { get; set; } = true;
     /// Where Win+Shift+3 sends a capture: the Screenshots folder, or the clipboard.
     public bool CapturesToClipboard { get; set; }
+    /// The shared clipboard: off until turned on, and nothing to share with
+    /// until a device has been connected.
+    public bool SyncEnabled { get; set; }
+    public string? SyncDeviceId { get; set; }
+    public string? SyncPeerId { get; set; }
+    public string? SyncPeerName { get; set; }
+    /// The key shared with the other device, under Windows' protection.
+    public string? SyncPeerKey { get; set; }
+    public string? SyncPeerAddress { get; set; }
     public bool TrayIconHidden { get; set; }
     public bool Greeted { get; set; }
     public DateTime? LastUpdateCheck { get; set; }

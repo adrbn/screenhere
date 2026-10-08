@@ -105,8 +105,12 @@ final class PanelModel: ObservableObject {
     }
 
     func stopPolling() {
+        let wasPolling = timer != nil
         timer?.invalidate()
         timer = nil
+        // Connecting a device is asked for from the panel, and ends with it.
+        // The timer only ever runs on the main thread.
+        if wasPolling { MainActor.assumeIsolated { SyncController.shared.endPairing() } }
     }
 
     /// Cheap sampling, safe to run continuously: two CoreGraphics calls and a

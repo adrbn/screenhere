@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if PreviewCoordinator.isEnabled { CaptureWatcher.shared.start() }
 
         LinkPreviewController.shared.activate()
+        SyncController.shared.activate()
         ClipboardController.shared.activate()
         TextShortcuts.shared.activate()
         WindowShortcuts.shared.activate()

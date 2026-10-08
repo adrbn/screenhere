@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
@@ -29,7 +29,8 @@ internal static class Memory
         {
             made.Stop();
             // Not while a window is up: it would only be paged back in.
-            if (PanelWindow.IsOpen || HistoryWindow.IsOpen)
+            // Nor with a connection up: its pages are in use all the time.
+            if (PanelWindow.IsOpen || HistoryWindow.IsOpen || SyncController.Shared.IsConnected)
             {
                 SettleSoon();
                 return;

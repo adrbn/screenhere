@@ -40,28 +40,31 @@ final class ClipboardController: ObservableObject {
     /// everything someone copies without them asking for it.
     func activate() {
         isEnabled = UserDefaults.standard.bool(forKey: TextPrefs.historyKey)
-        if isEnabled {
-            loadHistory()
-            watcher.start()
-        }
+        if isEnabled { loadHistory() }
+        watch()
         refreshAccess()
+    }
+
+    /// Watches the pasteboard while something needs it: the history, or the
+    /// clipboard shared with another device.
+    func watch() {
+        if isEnabled || SyncController.shared.isEnabled {
+            if !watcher.isRunning { watcher.start() }
+        } else {
+            watcher.stop()
+        }
     }
 
     func setEnabled(_ on: Bool) {
         UserDefaults.standard.set(on, forKey: TextPrefs.historyKey)
         isEnabled = on
-        if on {
-            loadHistory()
-            watcher.start()
-        } else {
-            flush()
-            watcher.stop()
-        }
+        if on { loadHistory() } else { flush() }
+        watch()
         refreshAccess()
     }
 
     func refreshAccess() {
-        guard isEnabled, #available(macOS 15.4, *) else {
+        guard isEnabled || SyncController.shared.isEnabled, #available(macOS 15.4, *) else {
             needsPasteAccess = false
             return
         }
@@ -108,6 +111,24 @@ final class ClipboardController: ObservableObject {
             watcher.ignore(changeCount: pasteboard.changeCount)
             if isEnabled { apply(history.adding(files: files, source: item.source, at: Date())) }
             return true
+        }
+    }
+
+    /// Puts a picture that came from the other device on the clipboard and,
+    /// when history is on, at its top.
+    func writeImage(_ png: Data, source: String?) {
+        let pasteboard = NSPasteboard.general
+        tiffProvider = PasteboardImageWriter.write(png, format: .png, to: pasteboard)
+        watcher.ignore(changeCount: pasteboard.changeCount)
+        guard isEnabled else { return }
+        let images = self.images
+        let generation = self.generation
+        imageQueue.async {
+            let image = try? images.ingest(png, type: "public.png")
+            Task { @MainActor in
+                guard let image, self.isEnabled, self.generation == generation else { return }
+                self.apply(self.history.adding(image: image, source: source, at: Date()))
+            }
         }
     }
 
@@ -175,17 +196,27 @@ final class ClipboardController: ObservableObject {
     }
 
     private func handle(_ copied: Copied, source: String?) {
+        // The watcher also runs for the shared clipboard alone: the history
+        // only takes what it is on for.
+        let keeps = isEnabled
         switch copied {
         case .text(let text):
-            apply(history.adding(text, source: source, at: Date()))
+            if keeps { apply(history.adding(text, source: source, at: Date())) }
+            SyncController.shared.localCopy(text: text)
         case .files(let urls):
-            apply(history.adding(files: urls.map { ClipFile(path: $0.path) }, source: source, at: Date()))
+            if keeps { apply(history.adding(files: urls.map { ClipFile(path: $0.path) }, source: source, at: Date())) }
         case .image(let data, let type):
             let images = self.images
             let generation = self.generation
+            let shares = SyncController.shared.isConnected
             imageQueue.async {
-                let image = try? images.ingest(data, type: type)
+                let image = keeps ? (try? images.ingest(data, type: type)) : nil
+                // The other device is sent a PNG, whatever the copy came as.
+                let png = !shares ? nil
+                    : type == "public.png" ? data
+                    : NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:])
                 Task { @MainActor in
+                    if let png { SyncController.shared.localCopy(png: png) }
                     // Turned off or cleared meanwhile: a file left behind is
                     // swept at the next load.
                     guard let image, self.isEnabled, self.generation == generation else { return }

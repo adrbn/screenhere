@@ -153,7 +153,17 @@ internal sealed class ClipboardController
     public void Activate()
     {
         IsEnabled = Settings.Current.HistoryEnabled;
-        if (IsEnabled) Start();
+        if (IsEnabled) LoadHistory();
+        Watch();
+    }
+
+    /// Listens to the clipboard while something needs it: the history, or the
+    /// clipboard shared with another device.
+    public void Watch()
+    {
+        if (posed) return;
+        if (IsEnabled || SyncController.Shared.IsEnabled) Start();
+        else Stop();
     }
 
     public void SetEnabled(bool on)
@@ -161,15 +171,9 @@ internal sealed class ClipboardController
         Settings.Current.HistoryEnabled = on;
         Settings.Current.Save();
         IsEnabled = on;
-        if (on)
-        {
-            Start();
-        }
-        else
-        {
-            Flush();
-            Stop();
-        }
+        if (on) LoadHistory();
+        else Flush();
+        Watch();
         Changed?.Invoke();
     }
 
@@ -177,7 +181,6 @@ internal sealed class ClipboardController
 
     private void Start()
     {
-        LoadHistory();
         if (listener != null) return;
         // A window that only exists to be told about the clipboard. Windows
         // sends a message on every copy, so nothing is polled.
@@ -216,7 +219,7 @@ internal sealed class ClipboardController
     private void Read()
     {
         // ScreenHere's own writes are added to the history directly.
-        if (!IsEnabled || Native.GetClipboardSequenceNumber() == ignoredSequence) return;
+        if (listener == null || Native.GetClipboardSequenceNumber() == ignoredSequence) return;
         var source = FrontmostApp();
         ClipboardAccess.Try(() =>
         {
@@ -230,7 +233,7 @@ internal sealed class ClipboardController
             switch (ClipboardFilter.KindOf(formats, excluded))
             {
                 case ClipboardFilter.Kind.Files:
-                    if (data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths)
+                    if (IsEnabled && data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths)
                     {
                         Apply(History.Adding(paths.Select(p => new ClipFile(p)).ToList(), source, DateTime.Now));
                     }
@@ -238,8 +241,13 @@ internal sealed class ClipboardController
                 case ClipboardFilter.Kind.Text:
                     if (data.GetData(DataFormats.UnicodeText) is not string text) break;
                     // A browser's "Copy image" can add the picture's address as text.
-                    if (ClipboardFilter.IsLink(text) && ClipboardFilter.HasImage(formats)) TakeImage(data, source);
-                    else Apply(History.Adding(text, source, DateTime.Now));
+                    if (ClipboardFilter.IsLink(text) && ClipboardFilter.HasImage(formats))
+                    {
+                        TakeImage(data, source);
+                        break;
+                    }
+                    if (IsEnabled) Apply(History.Adding(text, source, DateTime.Now));
+                    SyncController.Shared.LocalCopy(text);
                     break;
                 case ClipboardFilter.Kind.Image:
                     TakeImage(data, source);
@@ -272,12 +280,14 @@ internal sealed class ClipboardController
         {
             try
             {
-                var image = images.Ingest(png ?? ClipboardAccess.Png(bitmap!));
+                png ??= ClipboardAccess.Png(bitmap!);
+                var image = IsEnabled ? images.Ingest(png) : null;
                 Application.Current?.Dispatcher.BeginInvoke(() =>
                 {
                     // Turned off or cleared meanwhile: a file left behind is
                     // swept at the next load.
-                    if (IsEnabled && generation == started) Apply(History.Adding(image, source, DateTime.Now));
+                    if (image != null && IsEnabled && generation == started) Apply(History.Adding(image, source, DateTime.Now));
+                    SyncController.Shared.LocalCopy(png);
                 });
             }
             catch

@@ -29,6 +29,8 @@ internal static class Features
         PowerToys.Refresh();
         ClipboardController.Shared.Activate();
         LinkPreviews.Shared.Activate();
+        SyncController.Shared.Activate();
+        ClipboardController.Shared.Watch();
         Rebind();
         if (Settings.PreviewOnCapturedScreen) ScreenshotWatcher.Start();
     }

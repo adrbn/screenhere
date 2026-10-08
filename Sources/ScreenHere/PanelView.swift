@@ -28,7 +28,7 @@ struct PanelView: View {
 
             SectionTitle(text: "Options")
                 .padding(.top, 10)
-            PanelOptions(model: model, window: .shared, clipboard: .shared, links: .shared)
+            PanelOptions(model: model, window: .shared, clipboard: .shared, links: .shared, sync: .shared)
                 .padding(.horizontal, 6)
 
             Divider()

@@ -105,6 +105,7 @@ internal static class Glyph
     public const string Check = "";
     public const string Enter = "";
     public const string NoResults = "";
+    public const string Devices = "";
 
     /// The pointer in the arrow's proportions, the same outline as the app
     /// icon and the tray icon: tip at the top left, y growing downwards.
