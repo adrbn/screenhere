@@ -1,0 +1,45 @@
+name: Windows
+
+on:
+  push:
+    branches: [main]
+    paths: ['windows/**', '.github/workflows/windows.yml']
+  pull_request:
+    paths: ['windows/**', '.github/workflows/windows.yml']
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write   # to attach the build to the release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test and publish
+        shell: pwsh
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if ($env:TAG) { ./windows/scripts/publish.ps1 -Version $env:TAG.TrimStart('v') }
+          else { ./windows/scripts/publish.ps1 }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScreenHere-Windows
+          path: windows/dist/ScreenHere-Windows.exe
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload $env:TAG windows/dist/ScreenHere-Windows.exe --clobber
