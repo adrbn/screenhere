@@ -19,6 +19,8 @@
 
 <sub>macOS 13 or later · Signed and notarized · Free and open source</sub>
 
+<sub>On a PC? <a href="windows/README.md">ScreenHere for Windows</a> has the same three shortcuts.</sub>
+
 [![Latest release](https://img.shields.io/github/v/release/adrbn/screenhere?label=release&color=7D4FF0)](https://github.com/adrbn/screenhere/releases/latest)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](https://github.com/adrbn/screenhere/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-8B5CF6)](LICENSE)
@@ -135,6 +137,7 @@ Yes: click **⋯** in the menu, then **Hide Menu Bar Icon**. The shortcuts keep 
 ## More
 
 - [How it works](docs/HOW-IT-WORKS.md): borrowing the shortcut and giving it back, window capture, the capture preview, text recognition, the clipboard history and link previews.
+- [ScreenHere for Windows](windows/README.md): the same shortcuts on Windows 10 and 11, and what differs.
 - [Building from source](docs/BUILDING.md)
 - [Report a bug or ask for a feature](https://github.com/adrbn/screenhere/issues)
 
