@@ -88,6 +88,7 @@ final class PanelModel: ObservableObject {
     func startPolling() {
         refreshEnvironment()
         refresh()
+        refit()
         timer?.invalidate()
         let timer = Timer(timeInterval: 1.0 / 10.0, repeats: true) { [weak self] _ in
             guard let self else { return }
@@ -102,6 +103,31 @@ final class PanelModel: ObservableObject {
         // .common so the pointer keeps updating while a control is being tracked.
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+    }
+
+    /// Makes the panel's window as tall as what it shows.
+    ///
+    /// The menu sizes its window to its content while it is open, and not
+    /// while it is closed: rows that went away in the meantime — connecting a
+    /// device ends when the panel closes — left the window at its old height,
+    /// with the content floating between two empty bands.
+    private func refit() {
+        fit()
+        // Once more when SwiftUI has laid the new rows out.
+        DispatchQueue.main.async { [weak self] in self?.fit() }
+    }
+
+    private func fit() {
+        guard let window = panelWindow, let content = window.contentView else { return }
+        let wanted = content.fittingSize.height
+        var frame = window.frame
+        let chrome = frame.height - window.contentLayoutRect.height
+        let height = wanted + chrome
+        guard wanted > 0, abs(frame.height - height) > 0.5 else { return }
+        // Hung from its top edge, under the menu bar.
+        frame.origin.y += frame.height - height
+        frame.size.height = height
+        window.setFrame(frame, display: true)
     }
 
     func stopPolling() {
