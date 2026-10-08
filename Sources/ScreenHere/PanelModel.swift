@@ -88,6 +88,8 @@ final class PanelModel: ObservableObject {
     func startPolling() {
         refreshEnvironment()
         refresh()
+        // The timer only ever runs on the main thread.
+        MainActor.assumeIsolated { SyncController.shared.panelDidOpen() }
         refit()
         timer?.invalidate()
         let timer = Timer(timeInterval: 1.0 / 10.0, repeats: true) { [weak self] _ in
@@ -134,9 +136,8 @@ final class PanelModel: ObservableObject {
         let wasPolling = timer != nil
         timer?.invalidate()
         timer = nil
-        // Connecting a device is asked for from the panel, and ends with it.
-        // The timer only ever runs on the main thread.
-        if wasPolling { MainActor.assumeIsolated { SyncController.shared.endPairing() } }
+        // Connecting a device is asked for from the panel, and waits with it.
+        if wasPolling { MainActor.assumeIsolated { SyncController.shared.panelDidClose() } }
     }
 
     /// Cheap sampling, safe to run continuously: two CoreGraphics calls and a
