@@ -80,14 +80,30 @@ internal static class Features
     public static string? SetShortcut(Feature feature, KeyShortcut shortcut)
     {
         PowerToys.Refresh();
-        if (shortcut.Problem(feature, Others(), PowerToys.Shortcuts) is { } problem) return problem;
-        Shortcuts[feature] = shortcut;
-        if (shortcut == KeyShortcut.Default(feature)) Settings.Shortcuts.Remove(feature.ToString());
-        else Settings.Shortcuts[feature.ToString()] = [shortcut.Key, (int)shortcut.Modifiers];
+        // What Windows and PowerToys have is theirs. What another of
+        // ScreenHere's own features has is the user's to hand out.
+        if (shortcut.Problem(feature, [], PowerToys.Shortcuts) is { } problem) return problem;
+        var previous = Shortcut(feature);
+        if (shortcut.Rival(feature, Others()) is { } rival)
+        {
+            // The two swap: the feature that had these keys gets the ones
+            // this one is giving up — unless a third stands in the way.
+            var rest = Others().Where(o => o.Item1 != feature && o.Item1 != rival).Append((feature, shortcut)).ToList();
+            if (previous.Problem(rival, rest, PowerToys.Shortcuts) != null) return $"Used by {rival}";
+            Store(rival, previous);
+        }
+        Store(feature, shortcut);
         Recording = null;
         Hotkeys.Recorder = null;
         Change();
         return null;
+    }
+
+    private static void Store(Feature feature, KeyShortcut shortcut)
+    {
+        Shortcuts[feature] = shortcut;
+        if (shortcut == KeyShortcut.Default(feature)) Settings.Shortcuts.Remove(feature.ToString());
+        else Settings.Shortcuts[feature.ToString()] = [shortcut.Key, (int)shortcut.Modifiers];
     }
 
     /// Back to the default — unless another feature has been given it since.

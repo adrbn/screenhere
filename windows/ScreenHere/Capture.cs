@@ -56,6 +56,7 @@ internal static class Capture
             dispatcher.BeginInvoke(() =>
             {
                 if (toClipboard) ClipboardController.Shared.WriteImage(png, "ScreenHere");
+                else ClipboardController.Shared.Keep(png, "ScreenHere");
                 Announce(png, file, toClipboard, display);
             });
             _ = dispatcher.BeginInvoke(() => Memory.SettleSoon());

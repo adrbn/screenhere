@@ -106,6 +106,17 @@ struct PanelOptions: View {
                     PanelRow(icon: "desktopcomputer", title: PanelStrings.shortName(device.name, max: 30),
                              action: { sync.pair(with: device) })
                 }
+                if let address = sync.ownAddress {
+                    // For the networks where the other device never finds
+                    // this one: it can be told where to look.
+                    PanelRow(icon: "globe", title: "This Mac is at") {
+                        Text(address)
+                            .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                            .monospacedDigit()
+                            .textSelection(.enabled)
+                    }
+                    .help("If this Mac does not show up on the other device, type this address there.")
+                }
             } else if let peer = sync.peer {
                 PanelRow(icon: "desktopcomputer", title: PanelStrings.shortName(peer.name, max: 18)) {
                     HStack(spacing: 6) {

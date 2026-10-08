@@ -29,6 +29,7 @@ internal sealed class Settings
     /// The key shared with the other device, under Windows' protection.
     public string? SyncPeerKey { get; set; }
     public string? SyncPeerAddress { get; set; }
+    public int? SyncPeerPort { get; set; }
     public bool TrayIconHidden { get; set; }
     public bool Greeted { get; set; }
     public DateTime? LastUpdateCheck { get; set; }

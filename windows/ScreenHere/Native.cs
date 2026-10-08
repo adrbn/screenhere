@@ -81,6 +81,44 @@ internal static class Native
         if (attached) AttachThreadInput(ours, theirs, false);
     }
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string className, string? title);
+
+    /// Where the taskbars are, one per display that has one — also while one
+    /// that hides itself is showing, which the work area knows nothing about.
+    public static List<RECT> Taskbars()
+    {
+        var found = new List<RECT>();
+        foreach (var className in new[] { "Shell_TrayWnd", "Shell_SecondaryTrayWnd" })
+        {
+            var window = IntPtr.Zero;
+            while ((window = FindWindowEx(IntPtr.Zero, window, className, null)) != IntPtr.Zero)
+            {
+                if (IsWindowVisible(window) && GetWindowRect(window, out var rect)) found.Add(rect);
+            }
+        }
+        return found;
+    }
+
+    /// Whether Windows' firewall already lets other devices reach this app on
+    /// `port`. Asked rather than tried: trying is what makes Windows put up
+    /// its firewall question, which only an administrator can answer.
+    public static bool FirewallAllows(string program, int port)
+    {
+        try
+        {
+            if (Type.GetTypeFromProgID("HNetCfg.FwMgr") is not { } type || Activator.CreateInstance(type) is not { } manager) return false;
+            const int anyVersion = 2, tcp = 6;
+            object allowed = false, restricted = false;
+            ((dynamic)manager).IsPortAllowed(program, anyVersion, port, "", tcp, ref allowed, ref restricted);
+            return allowed is true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public static string ClassName(IntPtr hwnd)
     {
         var name = new StringBuilder(256);

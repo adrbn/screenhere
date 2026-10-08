@@ -313,7 +313,13 @@ internal static class Ui
     {
         var handle = new WindowInteropHelper(window).Handle;
         if (handle == IntPtr.Zero || !Native.GetWindowRect(handle, out var rect)) return;
-        var point = origin(new Size(rect.Width, rect.Height));
+        // The size WPF has just laid out, when it has one: a window that is
+        // growing knows its new size before Windows has been told.
+        var dpi = VisualTreeHelper.GetDpi(window);
+        var size = window.ActualWidth > 0 && window.ActualHeight > 0
+            ? new Size(window.ActualWidth * dpi.DpiScaleX, window.ActualHeight * dpi.DpiScaleY)
+            : new Size(rect.Width, rect.Height);
+        var point = origin(size);
         Native.SetWindowPos(handle, IntPtr.Zero, (int)Math.Round(point.X), (int)Math.Round(point.Y), 0, 0,
                             Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_NOACTIVATE);
     }

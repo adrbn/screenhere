@@ -343,6 +343,37 @@ final class SyncController: ObservableObject {
         pending = nil
     }
 
+    /// Where this Mac can be reached, to type on the other device when it
+    /// does not find this one by itself: "192.168.1.20", with the port after
+    /// a colon when it is not the usual one.
+    var ownAddress: String? {
+        guard let address = Self.localAddresses().first else { return nil }
+        guard let port = listener?.port?.rawValue, port != SyncProtocol.preferredPort else { return address }
+        return "\(address):\(port)"
+    }
+
+    /// This Mac's IPv4 addresses on the networks it is on.
+    static func localAddresses() -> [String] {
+        var found: [String] = []
+        var list: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&list) == 0 else { return [] }
+        defer { freeifaddrs(list) }
+        var cursor = list
+        while let entry = cursor {
+            cursor = entry.pointee.ifa_next
+            let flags = Int32(entry.pointee.ifa_flags)
+            guard let address = entry.pointee.ifa_addr, address.pointee.sa_family == UInt8(AF_INET),
+                  flags & IFF_UP != 0, flags & IFF_LOOPBACK == 0 else { continue }
+            var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+            guard getnameinfo(address, socklen_t(address.pointee.sa_len), &host, socklen_t(host.count),
+                              nil, 0, NI_NUMERICHOST) == 0 else { continue }
+            let text = String(cString: host)
+            // Self-assigned addresses lead nowhere.
+            if !text.hasPrefix("169.254.") { found.append(text) }
+        }
+        return found
+    }
+
     /// The user picked `device` in the panel: ask it.
     func pair(with device: Found) {
         guard isPairing, pending == nil, pairingWire == nil else { return }

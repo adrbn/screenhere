@@ -349,6 +349,23 @@ internal sealed class ClipboardController
         });
     }
 
+    /// Adds a capture that went to a file to the history, without touching
+    /// the clipboard: it is something the user just took, and the list is
+    /// where they will look for it.
+    public void Keep(byte[] png, string? source)
+    {
+        if (!IsEnabled) return;
+        var started = generation;
+        Task.Run(() =>
+        {
+            var image = images.Ingest(png);
+            Application.Current?.Dispatcher.BeginInvoke(() =>
+            {
+                if (IsEnabled && generation == started) Apply(History.Adding(image, source, DateTime.Now));
+            });
+        });
+    }
+
     /// Puts an item back on the clipboard. False when what it points at is
     /// gone from disk: a missing picture takes its item with it, a missing
     /// file does not — an unplugged disk comes back, and its row says so.

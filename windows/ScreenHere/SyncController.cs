@@ -133,6 +133,11 @@ internal sealed class SyncController
     private async Task Listen()
     {
         if (listener != null) return;
+        // Listening is what makes Windows ask whether to open its firewall —
+        // a question only an administrator can answer. So this PC listens
+        // only where the firewall already lets it be reached; everywhere else
+        // it reaches the other device instead, which needs no one's leave.
+        if (Settings.Profile == null && !Native.FirewallAllows(Environment.ProcessPath ?? "", SyncProtocol.PreferredPort)) return;
         var made = new StreamSocketListener();
         made.ConnectionReceived += (_, e) => Task.Run(() => Serve(e.Socket));
         try
@@ -232,7 +237,7 @@ internal sealed class SyncController
         var targets = new List<(string Address, int Port)>();
         if (found.TryGetValue(peer, out var seen)) targets.AddRange(Order(seen.Addresses).Select(a => (a, seen.Port)));
         // Where it was last time, in case the announcement does not get through.
-        if (settings.SyncPeerAddress is { } last && !targets.Any(t => t.Address == last)) targets.Add((last, SyncProtocol.PreferredPort));
+        if (settings.SyncPeerAddress is { } last && !targets.Any(t => t.Address == last)) targets.Add((last, settings.SyncPeerPort ?? SyncProtocol.PreferredPort));
         if (targets.Count == 0) return;
 
         connecting = true;
@@ -244,7 +249,7 @@ internal sealed class SyncController
                 if (stream == null) continue;
                 var made = await Task.Run(() => Session.AsClient(stream, DeviceId, peer, peerKey!));
                 if (made == null) continue;
-                settings.SyncPeerAddress = address;
+                (settings.SyncPeerAddress, settings.SyncPeerPort) = (address, port);
                 settings.Save();
                 Adopt(made);
                 break;
@@ -262,11 +267,17 @@ internal sealed class SyncController
 
     private static async Task<Stream?> Open(string address, int port)
     {
-        if (!IPAddress.TryParse(address, out var ip)) return null;
+        using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+        if (!IPAddress.TryParse(address, out var ip))
+        {
+            // A name rather than an address, as someone may type it.
+            try { ip = Order((await Dns.GetHostAddressesAsync(address, limit.Token)).Select(a => a.ToString())).Select(IPAddress.Parse).FirstOrDefault(); }
+            catch { ip = null; }
+            if (ip == null) return null;
+        }
         var client = new TcpClient(ip.AddressFamily) { NoDelay = true };
         try
         {
-            using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             await client.ConnectAsync(ip, port, limit.Token);
             return client.GetStream();
         }
@@ -421,6 +432,25 @@ internal sealed class SyncController
         Changed?.Invoke();
     }
 
+    /// Other devices can find and reach this PC. When they cannot — the usual
+    /// case without an administrator — it is this PC that has to ask.
+    public bool CanBeReached => listener != null;
+
+    /// The user typed where the other device is, as it shows it: "192.168.1.20",
+    /// or with a port after a colon. For networks that keep announcements from
+    /// getting through, a wired PC and a Mac on Wi-Fi among them.
+    public void Pair(string typed)
+    {
+        var address = typed.Trim();
+        var port = SyncProtocol.PreferredPort;
+        var colon = address.LastIndexOf(':');
+        if (colon > 0 && address.Count(c => c == ':') == 1 && int.TryParse(address[(colon + 1)..], out var given))
+        {
+            (address, port) = (address[..colon], given);
+        }
+        if (address.Length > 0) Pair(new Found("", address, [address], port));
+    }
+
     /// The user picked `device` in the panel: ask it.
     public async void Pair(Found device)
     {
@@ -449,12 +479,12 @@ internal sealed class SyncController
                     Type = "pair3", Public = SyncProtocol.Base64(mine), Nonce = SyncProtocol.Base64(nonce),
                 }), cancel.Token);
                 var (made, code) = SyncProtocol.Pairing(SyncProtocol.Agree(key, theirs), mine, theirs, nonce, theirNonce);
-                await Agree(stream, answer.Id, answer.Name ?? device.Name, made, code, address, cancel.Token);
+                await Agree(stream, answer.Id, answer.Name ?? device.Name, made, code, address, device.Port, cancel.Token);
                 return;
             }
             if (!cancel.IsCancellationRequested)
             {
-                Toast.Show(connected ? $"{device.Name} is not asking to connect" : $"Couldn't reach {device.Name} — try from there", Glyph.Warning);
+                Toast.Show(connected ? $"{device.Name} is not asking to connect" : $"Couldn't reach {device.Name}", Glyph.Warning);
             }
         }
         catch
@@ -501,7 +531,7 @@ internal sealed class SyncController
             // The key it shows now must be the one it promised before seeing ours.
             if (!SyncProtocol.Commitment(theirs, theirNonce).AsSpan().SequenceEqual(commit)) return;
             var (made, code) = SyncProtocol.Pairing(SyncProtocol.Agree(key, theirs), theirs, mine, theirNonce, nonce);
-            await ui.InvokeAsync(() => Agree(stream, asked.Id, asked.Name ?? "Device", made, code, null, cancel.Token)).Task.Unwrap();
+            await ui.InvokeAsync(() => Agree(stream, asked.Id, asked.Name ?? "Device", made, code, null, null, cancel.Token)).Task.Unwrap();
         }
         catch
         {
@@ -522,7 +552,7 @@ internal sealed class SyncController
     /// Both screens now show the same code — or someone is in the middle, and
     /// they do not. Each side says what its user decided; the devices are
     /// connected only when both said yes.
-    private async Task Agree(Stream stream, string id, string name, byte[] key, string code, string? address, CancellationToken cancel)
+    private async Task Agree(Stream stream, string id, string name, byte[] key, string code, string? address, int? port, CancellationToken cancel)
     {
         decision = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         Pending = new Offer(name, code, Confirmed: false);
@@ -548,6 +578,7 @@ internal sealed class SyncController
             session?.Close();
             session = null;
             (settings.SyncPeerId, settings.SyncPeerName, settings.SyncPeerKey, settings.SyncPeerAddress) = (id, name, Protect(key), address);
+            settings.SyncPeerPort = port;
             settings.Save();
             peerKey = key;
             IsPairing = false;
@@ -578,6 +609,7 @@ internal sealed class SyncController
     {
         var settings = Settings.Current;
         (settings.SyncPeerId, settings.SyncPeerName, settings.SyncPeerKey, settings.SyncPeerAddress) = (null, null, null, null);
+        settings.SyncPeerPort = null;
         settings.Save();
         peerKey = null;
         session?.Close();
