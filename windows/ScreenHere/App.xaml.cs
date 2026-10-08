@@ -31,6 +31,14 @@ public partial class App : Application
             if (SyncController.Shared.Nearby.FirstOrDefault() is { } device) SyncController.Shared.Pair(device);
         })),
         ("sync-confirm", () => Trying(SyncController.Shared.Confirm)),
+        // Opens the panel, then makes it grow and shrink while it is up.
+        ("panel-grow", () => Trying(() =>
+        {
+            PanelWindow.Open();
+            ((App)Current).Later(1500, () => SyncController.Shared.SetEnabled(true));
+            ((App)Current).Later(3000, SyncController.Shared.BeginPairing);
+            ((App)Current).Later(4500, () => SyncController.Shared.SetEnabled(false));
+        })),
         ("sync-status", () => Trying(() => File.WriteAllText(Path.Combine(Settings.Folder, "sync-status.txt"), SyncController.Shared.Describe()))),
     ];
 

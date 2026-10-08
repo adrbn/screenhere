@@ -17,7 +17,9 @@ A beta, off by default, in ScreenHere for the Mac and for Windows: what you copy
 
 That is done once. From then on the two find each other whenever they are on the same network, and the panel says **Connected**. **Forget** undoes it, on either side.
 
-> On a PC where you are not an administrator, Windows will not let other devices reach ScreenHere. That is fine — the PC reaches the Mac instead — but in step 3, **click the Mac's name on the PC**, not the other way round.
+> **From a PC, do step 3 on the PC.** Unless its firewall was opened for ScreenHere, a PC cannot be reached by other devices, and does not show up on them: it is the PC that reaches the Mac. ScreenHere never asks Windows to open the firewall — that takes an administrator — and does not need it.
+
+**The other device is not in the list?** Some networks do not carry the announcements devices find each other by: a PC on a cable and a Mac on Wi-Fi are often on two networks that only route to each other. While it is on **Connect a device…**, the Mac shows **This Mac is at** and an address: type it into **Not listed? Type the address it shows** on the PC, and press <kbd>Enter</kbd>. The rest is the same, and afterwards the PC goes back to that address by itself.
 
 The code is what makes it safe. Someone else on the network could answer in the other device's place, but they could not make both screens show the same digits: if the codes differ, click **Cancel**.
 
@@ -38,12 +40,14 @@ Nothing leaves your network, and there is no server and no account.
 - **Talking.** One direct connection between the two devices. Everything on it is encrypted with a key only those two have, made when they were connected and kept on each: in a file readable by your account only on the Mac, and under Windows' own data protection on a PC.
 - **Being asked.** ScreenHere answers a device it was never connected to only while you are on **Connect a device…**, and then only to show you the code.
 
-macOS asks once whether ScreenHere may find devices on your local network; Windows may ask whether to let it through the firewall. The first is needed. The second is not, as long as the other device can be reached.
+macOS asks once whether ScreenHere may find devices on your local network, which it needs. On Windows nothing is asked: ScreenHere listens only where the firewall already lets it be reached, and reaches the other device everywhere else.
 
 ## When it does not connect
 
-- **Not the same network**, or a network that keeps its devices apart: guest Wi-Fi, many office and hotel networks. There is nothing ScreenHere can do about that.
-- **A firewall on both sides.** One of the two has to be reachable. A Mac is, unless its firewall blocks incoming connections for ScreenHere.
+- **The Mac never asked about the local network**, or was told no: System Settings › Privacy & Security › Local Network, and switch ScreenHere on.
+- **Two networks that route to each other**, a cable and a Wi-Fi for instance: the devices do not see each other, but one can be told where the other is — see above.
+- **A network that keeps its devices apart**: guest Wi-Fi, many hotel networks. There is nothing ScreenHere can do about that.
+- **A firewall on both sides.** One of the two has to be reachable. A Mac is, unless its firewall blocks incoming connections for ScreenHere; a PC usually is not.
 - **A VPN** that takes all traffic, on either device.
 - **The other device is asleep.** It comes back by itself when it wakes.
 

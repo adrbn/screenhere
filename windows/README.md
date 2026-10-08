@@ -40,9 +40,10 @@ The panel is the same as the Mac's: the map of your displays with the one under 
 
 ## What is different from the Mac
 
-- **Every shortcut can be changed.** Click it in the options and press the keys you want; <kbd>Esc</kbd> keeps the one you had, the arrow goes back to the default. Keyboards differ more on Windows, and so do the shortcuts other apps got to first.
+- **Every shortcut can be changed.** Click it in the options and press the keys you want; <kbd>Esc</kbd> keeps the one you had, the arrow goes back to the default. Keyboards differ more on Windows, and so do the shortcuts other apps got to first. Keys another of ScreenHere's features already has are taken from it, and the two swap.
 - **The clipboard key is the other of Win and Ctrl.** With <kbd>Win</kbd><kbd>Shift</kbd><kbd>3</kbd>, adding <kbd>Ctrl</kbd> sends the capture to the clipboard. If your keyboard has the two swapped to put Ctrl under your thumb, Mac style, record <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>3</kbd> and it is <kbd>Win</kbd> that sends to the clipboard: the same fingers as <kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd>.
 - **The destination is ScreenHere's to set.** Windows has no setting for where screenshots go, so the chip at the top of the panel switches between your Screenshots folder and the clipboard.
+- **Captures are in the history either way.** A capture saved to the Screenshots folder is listed in the clipboard history like one sent to the clipboard, so <kbd>Win</kbd><kbd>Shift</kbd><kbd>8</kbd> finds it.
 - **The preview is on by default.** On the Mac it has to switch off macOS's own preview; on Windows there is nothing to switch off, and no shutter sound to say a capture worked. It also shows for <kbd>Win</kbd><kbd>PrtScn</kbd> and for snips the Snipping Tool saves.
 - **Nothing to restore.** See below.
 

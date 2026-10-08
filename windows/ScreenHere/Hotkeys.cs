@@ -50,12 +50,23 @@ internal readonly record struct KeyShortcut(int Key, Modifiers Modifiers)
         // Ctrl+C or Alt+F4 taken by a capture would be a trap.
         if (System.Numerics.BitOperations.PopCount((uint)Modifiers) < 2) return "Add Shift";
         if (this == new KeyShortcut('S', Modifiers.Win | Modifiers.Shift)) return "Used by Windows";
+        return Rival(feature, others) is { } other ? $"Used by {other}" : null;
+    }
+
+    /// The other feature this shortcut would collide with, if any: the same
+    /// keys, or — for the two captures — the same keys once the clipboard's
+    /// are added.
+    public Feature? Rival(Feature feature, IEnumerable<(Feature Feature, KeyShortcut Shortcut)> others)
+    {
+        var mine = Keys(feature, this);
         foreach (var (other, shortcut) in others)
         {
-            if (other == feature) continue;
-            if (this == shortcut || this == shortcut.ToClipboard || ToClipboard == shortcut || ToClipboard == shortcut.ToClipboard) return $"Used by {other}";
+            if (other != feature && Keys(other, shortcut).Any(mine.Contains)) return other;
         }
         return null;
+
+        static KeyShortcut[] Keys(Feature feature, KeyShortcut shortcut) =>
+            (feature is Feature.Screen or Feature.Window) ? new[] { shortcut, shortcut.ToClipboard } : new[] { shortcut };
     }
     public string Label => Describe(Modifiers) + KeyName(Key);
 

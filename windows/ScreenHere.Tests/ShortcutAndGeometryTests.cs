@@ -61,6 +61,18 @@ public class KeyShortcutTests
         Assert.Equal("Used by Screen", new KeyShortcut('3', CtrlShift).Problem(Feature.Window, Defaults));
     }
 
+    [Fact]
+    public void TextAndHistoryOnlyCollideOnTheirOwnKeys()
+    {
+        // Win+Ctrl+Shift+3 is where Screen sends to the clipboard: a capture
+        // could not share it, but History adds nothing to its shortcut.
+        var others = new[] { (Feature.Screen, new KeyShortcut('3', CtrlShift)) };
+        Assert.Null(new KeyShortcut('3', WinShift).Rival(Feature.History, others));
+        Assert.Equal(Feature.Screen, new KeyShortcut('3', WinShift).Rival(Feature.Window, others));
+        Assert.Equal(Feature.Screen, new KeyShortcut('3', CtrlShift).Rival(Feature.Text, others));
+        Assert.Null(new KeyShortcut('3', CtrlShift).Rival(Feature.Screen, others));
+    }
+
     [Theory]
     [InlineData(0x70, "F1")]
     [InlineData(0x7B, "F12")]

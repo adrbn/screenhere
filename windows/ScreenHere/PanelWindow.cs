@@ -63,14 +63,28 @@ internal sealed class PanelWindow : Window
         var scale = display.Scale;
         // Above the tray icon that was clicked, wherever the taskbar is; in
         // the corner when it was opened some other way.
+        // The room left by the taskbar, measured from the taskbar itself: one
+        // that hides is showing while its icons are clicked, and the work area
+        // does not count it.
+        var free = display.Work;
+        foreach (var bar in Native.Taskbars())
+        {
+            var taskbar = new Rect(bar.Left, bar.Top, bar.Width, bar.Height);
+            if (!taskbar.IntersectsWith(display.Bounds) || taskbar.Width < display.Bounds.Width / 2) continue;
+            var top = Math.Max(free.Top, taskbar.Top > display.Bounds.Top + display.Bounds.Height / 2 ? free.Top : taskbar.Bottom);
+            var bottom = Math.Min(free.Bottom, taskbar.Top > display.Bounds.Top + display.Bounds.Height / 2 ? taskbar.Top : free.Bottom);
+            if (bottom > top) free = new Rect(free.Left, top, free.Width, bottom - top);
+        }
+        var above = pointer.Y >= free.Top;
+        var onTaskbar = !free.Contains(pointer);
         panel.anchor = size =>
         {
             var room = (ShadowRoom - Gap) * scale;
-            var onTaskbar = !display.Work.Contains(pointer);
-            var x = onTaskbar ? pointer.X - size.Width / 2 : display.Work.Right - size.Width + room;
-            var y = pointer.Y < display.Work.Top ? display.Work.Top - room : display.Work.Bottom - size.Height + room;
-            if (pointer.X < display.Work.Left) x = display.Work.Left - room;
-            return new Point(Math.Clamp(x, display.Work.Left - room, Math.Max(display.Work.Left - room, display.Work.Right - size.Width + room)), y);
+            var x = onTaskbar ? pointer.X - size.Width / 2 : free.Right - size.Width + room;
+            // Hung from the edge the taskbar is on, so it grows away from it.
+            var y = above ? free.Bottom - size.Height + room : free.Top - room;
+            x = Math.Clamp(x, free.Left - room, Math.Max(free.Left - room, free.Right - size.Width + room));
+            return new Point(x, Math.Max(y, display.Bounds.Top - room));
         };
         Ui.ShowOn(panel, display, panel.anchor, activate: true);
         panel.Rise();
@@ -117,7 +131,13 @@ internal sealed class PanelWindow : Window
         // attached to the edge it opened from.
         SizeChanged += (_, _) =>
         {
-            if (anchor != null) Ui.Move(this, anchor);
+            if (anchor == null) return;
+            Ui.Move(this, anchor);
+            // And once the new size has reached the window itself.
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (!closing && anchor != null) Ui.Move(this, anchor);
+            }, DispatcherPriority.Loaded);
         };
         PreviewKeyDown += (_, e) =>
         {
@@ -483,17 +503,13 @@ internal sealed class PanelWindow : Window
         if (sync.IsPairing)
         {
             var nearby = sync.Nearby;
-            if (nearby.Count == 0)
-            {
-                options.Children.Add(Row(Ui.Icon(Glyph.Search, 12), "Looking for devices…", trailing: Cancel()));
-                options.Children.Add(Hint("Click Connect a device in ScreenHere on the other one too."));
-                return;
-            }
-            options.Children.Add(Row(Ui.Icon(Glyph.Search, 12), "Choose the device", trailing: Cancel()));
+            options.Children.Add(Row(Ui.Icon(Glyph.Search, 12), nearby.Count == 0 ? "Looking for devices…" : "Choose the device", trailing: Cancel()));
             foreach (var device in nearby)
             {
                 options.Children.Add(Row(Ui.Icon(Glyph.Display, 12), ShortName(device.Name, 30), action: () => sync.Pair(device)));
             }
+            if (nearby.Count == 0) options.Children.Add(Hint("Click Connect a device in ScreenHere on the other one too."));
+            options.Children.Add(AddressField());
             return;
         }
 
@@ -513,6 +529,43 @@ internal sealed class PanelWindow : Window
         }
 
         UIElement Cancel() => Ui.Press("Footer", "Cancel", sync.EndPairing);
+    }
+
+    /// For the networks where the other device never shows up by itself: it
+    /// says where it is, and that is typed here.
+    private FrameworkElement AddressField()
+    {
+        var field = new TextBox
+        {
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            FontSize = 12,
+            Padding = new Thickness(0),
+            VerticalContentAlignment = VerticalAlignment.Center,
+        };
+        field.SetResourceReference(ForegroundProperty, "Primary");
+        field.SetResourceReference(TextBox.CaretBrushProperty, "Primary");
+        field.SetResourceReference(TextBox.SelectionBrushProperty, "Brand");
+        var placeholder = Ui.Text("Not listed? Type the address it shows", 12, null, "Secondary");
+        placeholder.IsHitTestVisible = false;
+        placeholder.Margin = new Thickness(2, 0, 0, 1);
+        field.TextChanged += (_, _) => placeholder.Visibility = field.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        field.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != System.Windows.Input.Key.Enter) return;
+            e.Handled = true;
+            SyncController.Shared.Pair(field.Text);
+        };
+
+        var box = new Grid { Margin = new Thickness(8, 0, 0, 0) };
+        box.Children.Add(placeholder);
+        box.Children.Add(field);
+        var content = new DockPanel();
+        content.Children.Add(new Grid { Width = 16, Children = { Ui.Icon(Glyph.Globe, 12) } }.Docked(Dock.Left));
+        content.Children.Add(box);
+        var row = new Border { Height = 26, Padding = new Thickness(6, 0, 6, 0), CornerRadius = new CornerRadius(6), Child = content };
+        row.SetResourceReference(Border.BackgroundProperty, "P05");
+        return new Border { Padding = new Thickness(0, 2, 0, 3), Child = row };
     }
 
     private static FrameworkElement Hint(string text) =>

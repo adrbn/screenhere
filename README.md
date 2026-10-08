@@ -7,7 +7,7 @@
 
 # ScreenHere
 
-### The three screen shortcuts macOS is missing.
+### The three screen shortcuts your Mac and your PC are missing.
 
 <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> copies any text you can see but can't select.<br/>
 <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures the screen under your pointer, not both of them.<br/>
@@ -19,10 +19,11 @@
 
 <sub>macOS 13 or later · Signed and notarized · Free and open source</sub>
 
-<sub>On a PC? <a href="windows/README.md">ScreenHere for Windows</a> has the same three shortcuts.</sub>
+**[Download for Windows](https://github.com/adrbn/screenhere/releases/latest/download/ScreenHere-Windows.exe)** · <sub>Windows 10 and 11 · the same shortcuts with <kbd>Win</kbd> for <kbd>⌘</kbd> · <a href="windows/README.md">what differs</a></sub>
 
 [![Latest release](https://img.shields.io/github/v/release/adrbn/screenhere?label=release&color=7D4FF0)](https://github.com/adrbn/screenhere/releases/latest)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](https://github.com/adrbn/screenhere/releases/latest)
+[![Windows 10+](https://img.shields.io/badge/Windows-10%2B-0078D4)](windows/README.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-8B5CF6)](LICENSE)
 
 <br/>
@@ -77,10 +78,21 @@ The last 200 things you copied — text, images, files — in a list under your 
 
 **Two computers?** Turn on **Shared clipboard** (a beta) on both, connect them once with a code, and what you copy on one is on the clipboard of the other — a Mac and a PC included. It stays on your network: [how it works](docs/SHARED-CLIPBOARD.md).
 
+## On Windows
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/windows-panel-dark.png">
+  <img src="docs/assets/windows-panel-light.png" width="368" alt="The ScreenHere panel on Windows: the same map of the displays, tiles and options as on the Mac" />
+</picture>
+
+The same app, on Windows 10 and 11: <kbd>Win</kbd><kbd>Shift</kbd><kbd>3</kbd> for the screen under the pointer, <kbd>Win</kbd><kbd>Shift</kbd><kbd>2</kbd> for the window, <kbd>Win</kbd><kbd>Shift</kbd><kbd>7</kbd> for text and <kbd>Win</kbd><kbd>Shift</kbd><kbd>8</kbd> for the history, behind the same panel. Text is read by Windows' own recogniser, on your PC.
+
+Every shortcut can be changed there, and ScreenHere stays out of the way of PowerToys. No administrator rights are needed, to install it or for anything it does. [ScreenHere for Windows](windows/README.md) has the details.
+
 ## Private by design
 
-- **Text is read on your Mac** by Apple's Vision framework. Nothing is uploaded.
-- **The history never leaves your Mac**, and only your account can read it. Anything a password manager marks as secret is never kept.
+- **Text is read on your computer**, by Apple's Vision framework on a Mac and by Windows' own recogniser on a PC. Nothing is uploaded.
+- **The history never leaves your computer**, and only your account can read it. Anything a password manager marks as secret is never kept.
 - **No account, no analytics.** ScreenHere only goes online to check for updates, and to fetch link titles if you turn on that beta. The shared clipboard, if you turn it on, talks to your other device directly and encrypted, and never leaves your network.
 - **Open source**, so you can check all of this yourself.
 
@@ -91,6 +103,8 @@ The last 200 things you copied — text, images, files — in a list under your 
 3. Keep **Launch ScreenHere at login** ticked, so the shortcut still works after a restart.
 
 ScreenHere keeps itself up to date.
+
+**On Windows**, download [ScreenHere-Windows.exe](https://github.com/adrbn/screenhere/releases/latest/download/ScreenHere-Windows.exe) and open it: it moves into your own Programs folder and sits in the notification area. Nothing to allow, and no administrator needed.
 
 ## FAQ
 
