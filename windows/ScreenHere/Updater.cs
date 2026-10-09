@@ -28,6 +28,8 @@ internal sealed class Updater
     private string? downloadUrl;
     private readonly DispatcherTimer daily = new() { Interval = TimeSpan.FromHours(6) };
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(60) };
+    /// For the update itself, which takes as long as the line needs.
+    private static readonly HttpClient Downloads = new() { Timeout = Timeout.InfiniteTimeSpan };
 
     public static string CurrentVersion { get; } =
         Assembly.GetExecutingAssembly().GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.0.0";
@@ -35,6 +37,7 @@ internal sealed class Updater
     static Updater()
     {
         Client.DefaultRequestHeaders.UserAgent.ParseAdd($"ScreenHere/{CurrentVersion}");
+        Downloads.DefaultRequestHeaders.UserAgent.ParseAdd($"ScreenHere/{CurrentVersion}");
         Client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
     }
 
@@ -96,6 +99,9 @@ internal sealed class Updater
         return best is { } b ? ($"{b.Version.Major}.{b.Version.Minor}.{Math.Max(0, b.Version.Build)}", b.Url) : null;
     }
 
+    /// How far the download is, from 0 to 1, while an update is installing.
+    public double Progress { get; private set; }
+
     /// Downloads the new build next to the running one, swaps them and
     /// restarts. The shortcuts are back as soon as the new copy is up.
     public async void Install()
@@ -109,29 +115,86 @@ internal sealed class Updater
             try { Process.Start(new ProcessStartInfo("https://github.com/adrbn/screenhere/releases/latest") { UseShellExecute = true }); } catch { }
             return;
         }
+        Progress = 0;
         Set(Status.Installing, notify: true);
         var fresh = running + ".new";
         var old = running + ".old";
         try
         {
-            var bytes = await Client.GetByteArrayAsync(downloadUrl);
-            if (bytes.Length < 100_000 || bytes[0] != 'M' || bytes[1] != 'Z') throw new InvalidDataException();
-            await File.WriteAllBytesAsync(fresh, bytes);
-            // A running program cannot be overwritten, but it can be renamed.
-            File.Delete(old);
-            File.Move(running, old);
-            File.Move(fresh, running);
-            Process.Start(new ProcessStartInfo(running, "--updated") { UseShellExecute = false });
+            // Unless an earlier try already put the new build in place and
+            // only failed to start it: then there is nothing left to fetch.
+            if (!Swapped(running, old))
+            {
+                await Download(downloadUrl, fresh);
+                // A running program cannot be overwritten, but it can be renamed.
+                File.Delete(old);
+                File.Move(running, old);
+                File.Move(fresh, running);
+            }
+            await Relaunch(running);
             ((App)System.Windows.Application.Current).Quit();
         }
         catch
         {
             try { File.Delete(fresh); } catch { }
             Set(Status.Idle, notify: true);
-            Toast.Show("Couldn't install the update", Glyph.Warning);
+            // The new build may be in place all the same: opening ScreenHere
+            // again is then all it takes.
+            Toast.Show(Swapped(running, old) ? "Quit and reopen ScreenHere to finish updating" : "Couldn't install the update", Glyph.Warning);
         }
     }
 
+    /// The running copy has been renamed aside and a new one sits in its place.
+    private static bool Swapped(string running, string old) => File.Exists(old) && File.Exists(running);
+
+    /// To a file, as it comes: 70 MB is more than a slow line carries in the
+    /// minute a request is given by default, and more than memory needs to hold.
+    private async Task Download(string url, string target)
+    {
+        using var response = await Downloads.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+        var total = response.Content.Headers.ContentLength ?? 0;
+        await using (var source = await response.Content.ReadAsStreamAsync())
+        await using (var file = File.Create(target))
+        {
+            var buffer = new byte[128 * 1024];
+            long done = 0;
+            var shown = 0.0;
+            int read;
+            while ((read = await source.ReadAsync(buffer)) > 0)
+            {
+                await file.WriteAsync(buffer.AsMemory(0, read));
+                done += read;
+                if (total <= 0 || (double)done / total - shown < 0.01) continue;
+                Progress = shown = (double)done / total;
+                Changed?.Invoke();
+            }
+        }
+        var head = new byte[2];
+        await using (var check = File.OpenRead(target))
+        {
+            if (check.Length < 100_000 || await check.ReadAsync(head) < 2 || head[0] != 'M' || head[1] != 'Z') throw new InvalidDataException();
+        }
+    }
+
+    /// Starts the new copy, which waits for this one to quit. A file that was
+    /// just written is often held for a moment by the antivirus reading it,
+    /// and cannot be started until it lets go: tried again for a while.
+    private static async Task Relaunch(string running)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(running, "--updated") { UseShellExecute = false });
+                return;
+            }
+            catch when (attempt < 20)
+            {
+                await Task.Delay(750);
+            }
+        }
+    }
     /// What the last update left behind.
     private static void CleanUp()
     {
