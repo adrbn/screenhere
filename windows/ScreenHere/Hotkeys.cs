@@ -146,6 +146,46 @@ internal static class Hotkeys
     public static Action? OnEscape { get => onEscape; set => onEscape = value; }
     private static volatile Action? onEscape;
 
+    private static IntPtr mouseHook;
+    private static Native.LowLevelKeyboardProc? mouseCallback;
+    private static volatile Action<int, int>? onClick;
+
+    /// While set, every press of a mouse button anywhere is reported here,
+    /// in screen pixels, and still goes where it was going. For the list that
+    /// closes when something else is clicked: losing the keyboard is not
+    /// enough to know, since the desktop, the taskbar and a window that never
+    /// had the keyboard take a click without taking it. The mouse is only
+    /// listened to while something asks.
+    public static void WatchClicks(Action<int, int>? handler)
+    {
+        onClick = handler;
+        hookThread?.BeginInvoke(() =>
+        {
+            if (onClick != null && mouseHook == IntPtr.Zero)
+            {
+                mouseCallback = HandleMouse;
+                mouseHook = Native.SetWindowsHookEx(Native.WH_MOUSE_LL, mouseCallback, Native.GetModuleHandle(null), 0);
+            }
+            else if (onClick == null && mouseHook != IntPtr.Zero)
+            {
+                Native.UnhookWindowsHookEx(mouseHook);
+                mouseHook = IntPtr.Zero;
+                mouseCallback = null;
+            }
+        });
+    }
+
+    private static IntPtr HandleMouse(int code, IntPtr wParam, IntPtr lParam)
+    {
+        if (code >= 0 && wParam.ToInt32() is Native.WM_LBUTTONDOWN or Native.WM_RBUTTONDOWN or Native.WM_MBUTTONDOWN
+            && onClick is { } handler)
+        {
+            var point = Marshal.PtrToStructure<Native.POINT>(lParam);
+            dispatcher?.BeginInvoke(() => handler(point.X, point.Y));
+        }
+        return Native.CallNextHookEx(mouseHook, code, wParam, lParam);
+    }
+
     public static bool IsInstalled => hook != IntPtr.Zero;
 
     /// Why Windows refused the hook, or zero.
