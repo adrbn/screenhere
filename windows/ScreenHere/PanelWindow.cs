@@ -775,7 +775,7 @@ internal sealed class PanelWindow : Window
         {
             Updater.Status.Checking => "Checking…",
             Updater.Status.UpToDate => "Up to date",
-            Updater.Status.Installing => "Updating…",
+            Updater.Status.Installing => updater.Progress is > 0 and < 1 ? $"Updating… {updater.Progress:P0}" : "Updating…",
             _ when available != null => $"Update to {available}",
             _ => "Check for Updates",
         }, 12, available != null ? FontWeights.Medium : FontWeights.Normal).With(t => t.Margin = new Thickness(6, 0, 0, 1)));

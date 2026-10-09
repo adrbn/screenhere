@@ -31,6 +31,8 @@ public partial class App : Application
             if (SyncController.Shared.Nearby.FirstOrDefault() is { } device) SyncController.Shared.Pair(device);
         })),
         ("sync-confirm", () => Trying(SyncController.Shared.Confirm)),
+        // Installs the update that was found, as the button in the panel does.
+        ("update", () => Trying(Updater.Shared.Install)),
         // Opens the panel, then makes it grow and shrink while it is up.
         ("panel-grow", () => Trying(() =>
         {
