@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 
 namespace ScreenHere;
@@ -18,6 +19,8 @@ internal sealed class HistoryWindow : Window
     public const double ListWidth = 540;
     public const double ListHeight = 420;
     private const double ShadowRoom = 28;
+    /// How long the list takes to fade away.
+    public const double FadeOutSeconds = 0.2;
 
     private readonly ClipboardController clipboard = ClipboardController.Shared;
     private readonly LinkPreviews links = LinkPreviews.Shared;
@@ -107,8 +110,24 @@ internal sealed class HistoryWindow : Window
     {
         if (closing) return;
         closing = true;
-        Close();
+        // Gone as far as the app is concerned, at once: the shortcut can open
+        // a new list, and Esc is everyone's again, while this one fades.
+        if (current == this)
+        {
+            current = null;
+            Hotkeys.OnEscape = null;
+        }
+        IsHitTestVisible = false;
         if (giveKeyboardBack && previous != IntPtr.Zero && Native.IsWindow(previous)) Native.SetForegroundWindow(previous);
+
+        // It leaves the way a panel does on the Mac, where the system fades
+        // it out: opacity only, nothing moves, a fifth of a second.
+        var fade = new DoubleAnimation(0, TimeSpan.FromSeconds(FadeOutSeconds))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut },
+        };
+        fade.Completed += (_, _) => Close();
+        BeginAnimation(OpacityProperty, fade);
     }
 
     // MARK: - Layout
