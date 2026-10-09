@@ -65,6 +65,9 @@ internal sealed class HistoryWindow : Window
             display.Work.Y + display.Work.Height * 0.38 - size.Height / 2), activate: true);
         window.search.Focus();
         Keyboard.Focus(window.search);
+        // A click anywhere else closes it, whether or not Windows gave it the
+        // keyboard to lose.
+        Hotkeys.WatchClicks(window.ClickedAt);
         // Should Windows have refused it the keyboard, Esc still closes it.
         Hotkeys.OnEscape = () =>
         {
@@ -116,6 +119,7 @@ internal sealed class HistoryWindow : Window
         {
             current = null;
             Hotkeys.OnEscape = null;
+            Hotkeys.WatchClicks(null);
         }
         IsHitTestVisible = false;
         if (giveKeyboardBack && previous != IntPtr.Zero && Native.IsWindow(previous)) Native.SetForegroundWindow(previous);
@@ -128,6 +132,18 @@ internal sealed class HistoryWindow : Window
         };
         fade.Completed += (_, _) => Close();
         BeginAnimation(OpacityProperty, fade);
+    }
+
+    /// A mouse button went down at this point of the screen. Outside the list
+    /// — its shadow is outside too — that closes it.
+    private void ClickedAt(int x, int y)
+    {
+        if (closing || dragging) return;
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero || !Native.GetWindowRect(handle, out var frame)) return;
+        var shadow = (int)(ShadowRoom * VisualTreeHelper.GetDpi(this).DpiScaleX);
+        var inside = x >= frame.Left + shadow && x < frame.Right - shadow && y >= frame.Top + shadow && y < frame.Bottom - shadow;
+        if (!inside) Dismiss();
     }
 
     // MARK: - Layout
