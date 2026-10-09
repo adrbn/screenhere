@@ -145,11 +145,73 @@ public class ClipboardHistoryTests
         Assert.Equal("0 sec. ago", RelativeTime.Describe(Now.AddMinutes(5), Now));
     }
 
+    // What was read in a picture
+
+    private static ClipboardHistory Captioned(string caption) =>
+        ClipboardHistory.Empty.Adding(new ClipImage("a", 1920, 1080, 10), "Edge", Now).Captioning("a", caption);
+
+    [Fact]
+    public void CaptioningKeepsTheOriginalUntouched()
+    {
+        var original = ClipboardHistory.Empty.Adding(new ClipImage("a", 1, 1, 1), null, Now);
+        original.Captioning("a", "Vimeo targeting");
+        Assert.Null(original.Items[0].Image!.Caption);
+    }
+
+    [Fact]
+    public void OnlyTheMatchingPictureIsCaptioned()
+    {
+        var history = ClipboardHistory.Empty
+            .Adding(new ClipImage("a", 1, 1, 1), null, Now)
+            .Adding(new ClipImage("b", 1, 1, 1), null, Now)
+            .Captioning("a", "words");
+        Assert.Equal([null, "words"], history.Items.Select(i => i.Image!.Caption));
+    }
+
+    /// Read once: a second reading cannot overwrite what the first found.
+    [Fact]
+    public void AnAlreadyReadPictureKeepsItsWords()
+    {
+        var history = Captioned("Vimeo targeting").Captioning("a", "something else");
+        Assert.Equal("Vimeo targeting", history.Items[0].Image!.Caption);
+    }
+
+    /// Nothing to read is still read: empty, not null, so the picture is not
+    /// looked at again on every launch.
+    [Fact]
+    public void NothingToReadIsRecordedAsEmpty()
+    {
+        var image = Captioned("").Items[0].Image!;
+        Assert.Equal("", image.Caption);
+        Assert.Null(image.CaptionLine);
+    }
+
+    [Fact]
+    public void APictureIsFoundByWhatWasReadInIt()
+    {
+        var history = Captioned("Vimeo targeting\nAudience");
+        Assert.Single(history.Matching("targeting"));
+        Assert.Single(history.Matching("audience vimeo"));
+        Assert.Empty(history.Matching("youtube"));
+        // Still found the old ways, read or not.
+        Assert.Single(Captioned("").Matching("image edge"));
+    }
+
+    [Fact]
+    public void WordsSurviveSavingAndLoading()
+    {
+        var store = new ClipboardHistoryStore(Directory.CreateTempSubdirectory("screenhere-tests").FullName);
+        store.Save(Captioned("Vimeo targeting"));
+        Assert.Equal("Vimeo targeting", store.Load().Items[0].Image!.Caption);
+    }
+
     [Fact]
     public void RowsCollapseWhitespaceAndNameFiles()
     {
         Assert.Equal("a b c", HistoryWindow.RowTitle(new ClipItem { Text = "a\n\n  b\tc" }));
         Assert.Equal("Image", HistoryWindow.RowTitle(new ClipItem { Image = new ClipImage("d", 1, 1, 1) }));
+        Assert.Equal("Vimeo targeting", HistoryWindow.RowTitle(
+            new ClipItem { Image = new ClipImage("d", 1, 1, 1, "\n  Vimeo targeting \nAudience") }));
         Assert.Equal("a.txt + 2 more", HistoryWindow.RowTitle(new ClipItem { Files = [new(@"C:\a.txt"), new(@"C:\b.txt"), new(@"C:\c.txt")] }));
         Assert.Equal("1920 × 1080 · Edge · 16 sec. ago",
             HistoryWindow.Subtitle(new ClipItem { Image = new ClipImage("d", 1920, 1080, 1), Source = "Edge", Date = Now.AddSeconds(-16) }, Now));

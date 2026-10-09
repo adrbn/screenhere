@@ -18,6 +18,19 @@ struct ClipImage: Codable, Hashable, Sendable {
     let height: Int
     /// Size on disk, which is what the image budget counts.
     let byteCount: Int
+    /// The words read in the picture, so its row says what it shows and the
+    /// search finds it. Nil until it has been read, then empty when there was
+    /// nothing in it to read — so a blank picture is read once, not on every
+    /// launch.
+    var caption: String?
+
+    /// What a row can show of the caption: its first line, nil when there is
+    /// no caption or nothing in it.
+    var captionLine: String? {
+        caption?.split(whereSeparator: \.isNewline)
+            .lazy.map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { !$0.isEmpty }
+    }
 }
 
 /// A copied file, kept as a reference: its bytes stay where they are, so an
@@ -144,6 +157,16 @@ struct ClipboardHistory: Codable, Equatable {
         return ClipboardHistory(items: [item] + items.filter { $0.files != files }).trimmed()
     }
 
+    /// The same picture copied twice is one caption's work: both entries take
+    /// it. An entry already captioned keeps what it has.
+    func captioning(_ digest: String, with caption: String) -> ClipboardHistory {
+        ClipboardHistory(items: items.map { item in
+            guard var image = item.image, image.digest == digest, image.caption == nil else { return item }
+            image.caption = caption
+            return ClipItem(id: item.id, content: .image(image), date: item.date, source: item.source)
+        })
+    }
+
     func removing(_ id: UUID) -> ClipboardHistory {
         filtering { $0.id != id }
     }
@@ -185,13 +208,14 @@ struct ClipboardHistory: Codable, Equatable {
         return ClipboardHistory(items: kept)
     }
 
-    /// Pictures have no words of their own: they are found as "image" or by
-    /// the app they came from. Files are found by their whole path, so a
-    /// folder's name finds everything copied out of it.
+    /// A picture is found by the words read in it, by "image", or by the app
+    /// it came from. Files are found by their whole path, so a folder's name
+    /// finds everything copied out of it.
     private static func searchableText(_ item: ClipItem) -> String {
         switch item.content {
         case .text(let text): return text
-        case .image(let image): return "image \(image.width)×\(image.height) \(item.source ?? "")"
+        case .image(let image):
+            return "image \(image.width)×\(image.height) \(image.caption ?? "") \(item.source ?? "")"
         case .files(let files): return "\(files.map(\.path).joined(separator: " ")) \(item.source ?? "")"
         }
     }

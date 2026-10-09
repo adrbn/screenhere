@@ -386,6 +386,7 @@ internal sealed class HistoryWindow : Window
         TextBlock? leadGlyph = null;
         if (item.Image != null)
         {
+            clipboard.WantCaption(item.Image);
             lead = PictureTile(clipboard.Thumbnail(item.Image), fill: true, Glyph.Picture, clipboard.FilePath(item.Image));
         }
         else if (firstFile != null)
@@ -539,7 +540,8 @@ internal sealed class HistoryWindow : Window
     }
 
     /// Runs of whitespace collapse so a copied paragraph previews as text, not
-    /// as a column of blank lines.
+    /// as a column of blank lines. A picture is titled by what was read in it,
+    /// which is how a screenshot of a page is told apart from the next one.
     internal static string RowTitle(ClipItem item)
     {
         if (item.Text is { } text)
@@ -548,7 +550,7 @@ internal sealed class HistoryWindow : Window
             var shown = text.Length > 400 ? text[..400] : text;
             return string.Join(" ", shown.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         }
-        if (item.Image != null) return "Image";
+        if (item.Image is { } image) return image.CaptionLine ?? "Image";
         var files = item.Files!;
         return files.Count == 1 ? files[0].Name : $"{files[0].Name} + {files.Count - 1} more";
     }

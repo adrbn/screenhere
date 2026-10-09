@@ -89,6 +89,8 @@ Recognition runs on device with Vision's accurate engine, in a small reader proc
 
 Switch on **History** in the panel, then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> anywhere: a list of the last 200 texts and pictures you copied (up to 100 MB of pictures) opens under the pointer, without taking focus from the app you are in. Type to filter, use the arrows to choose, <kbd>Return</kbd> to copy, <kbd>Esc</kbd> to close, then <kbd>⌘</kbd><kbd>V</kbd> as usual. **Clear history** empties it, from the panel or the list.
 
+A copied picture is read as well: the fast engine looks at it in a throwaway process, like <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd>'s, and the words that come back title its row and go into the search — so a screenshot of a page is told apart from the next one, and found by typing what it says. Half a second on device, nothing uploaded. Pictures copied before this existed are read as their rows appear in the list, one at a time; one with nothing to read stays **Image** and is not looked at again.
+
 The history stays on your Mac, in `~/Library/Application Support/ScreenHere`, readable by your account only. Copies that password managers mark as concealed are never recorded. On macOS 15.4 and later, macOS asks before an app reads the clipboard in the background: choose **Always Allow**. Until it is allowed, the panel shows **Allow clipboard access…**, which opens the setting.
 
 ## Link previews (beta)

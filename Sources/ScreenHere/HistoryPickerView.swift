@@ -77,6 +77,7 @@ struct HistoryPickerView: View {
                             .onAppear {
                                 if let link { links.want(link) }
                                 if let first = copied?.first { filePictures.want(first) }
+                                if let image = item.image { clipboard.wantCaption(for: image) }
                             }
                     }
                 }
@@ -262,13 +263,14 @@ private struct HistoryRow: View {
     }
 
     /// Runs of whitespace collapse so a copied paragraph previews as text, not
-    /// as a column of blank lines.
+    /// as a column of blank lines. A picture is titled by what was read in it,
+    /// which is how a screenshot of a page is told apart from the next one.
     static func title(_ item: ClipItem) -> String {
         switch item.content {
         case .text(let text):
             return text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        case .image:
-            return "Image"
+        case .image(let image):
+            return image.captionLine ?? "Image"
         case .files(let files):
             guard let first = files.first else { return "Files" }
             return files.count == 1 ? first.name : "\(first.name) + \(files.count - 1) more"

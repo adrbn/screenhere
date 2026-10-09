@@ -82,7 +82,7 @@ It reads on your Mac, with Apple's own text recognition — nothing is uploaded,
   <img src="docs/assets/history-light.png" width="760" alt="The clipboard history: a searchable list of recently copied texts, links and images" />
 </picture>
 
-The last 200 things you copied — text, images, files — in a list under your pointer. Type to filter, press <kbd>Return</kbd>, paste. Copied files are listed by name with a Quick Look preview, and <kbd>Return</kbd> puts them back on the clipboard for the Finder; a file moved since is greyed out rather than forgotten. A picture can also be dragged out into any app, or saved to your Downloads folder. Off until you turn it on.
+The last 200 things you copied — text, images, files — in a list under your pointer. Type to filter, press <kbd>Return</kbd>, paste. Copied files are listed by name with a Quick Look preview, and <kbd>Return</kbd> puts them back on the clipboard for the Finder; a file moved since is greyed out rather than forgotten. A picture can also be dragged out into any app, or saved to your Downloads folder, and is listed by the words read in it — so a screenshot is told apart from the next one, and found by typing what it says. Off until you turn it on.
 
 **Two computers?** Turn on **Shared clipboard** (a beta) on both, connect them once with a code, and what you copy on one is on the clipboard of the other — a Mac and a PC included. It stays on your network: [how it works](docs/SHARED-CLIPBOARD.md).
 

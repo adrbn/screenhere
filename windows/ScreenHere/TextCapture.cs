@@ -88,6 +88,23 @@ internal static class TextRecognizer
         return string.Join("\n", result.Lines.Select(line => line.Text));
     }
 
+    /// The words in a PNG, empty when there are none to read. Null when the
+    /// recogniser could not be used at all, so the caller does not record a
+    /// picture as read when it was never looked at.
+    public static async Task<string?> Read(byte[] png)
+    {
+        try
+        {
+            using var stream = new MemoryStream(png);
+            using var bitmap = new Drawing.Bitmap(stream);
+            return await Recognize(bitmap);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     /// How much to enlarge a capture before reading it. The recogniser was
     /// made for scanned pages: interface text at its real size is too small
     /// for it, and comes out with letters missing.

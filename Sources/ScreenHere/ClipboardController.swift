@@ -31,6 +31,12 @@ final class ClipboardController: ObservableObject {
     /// Bumped by every clear, so a picture still being written when the
     /// history was cleared does not come back into it.
     private var generation = 0
+    /// Pictures still to be read, the digests already asked for, and whether a
+    /// reader is running: one picture at a time, so a list full of old
+    /// screenshots does not start a reader per row.
+    private var captionQueue: [ClipImage] = []
+    private var captionsAsked: Set<String> = []
+    private var readingCaption = false
 
     private init() {
         watcher.onCopy = { [weak self] copied, source in self?.handle(copied, source: source) }
@@ -128,6 +134,45 @@ final class ClipboardController: ObservableObject {
             Task { @MainActor in
                 guard let image, self.isEnabled, self.generation == generation else { return }
                 self.apply(self.history.adding(image: image, source: source, at: Date()))
+                self.wantCaption(for: image)
+            }
+        }
+    }
+
+    /// Reads the words in a picture, for its row's title and for the search.
+    /// Asked for by a new copy and by the list as rows appear, so pictures
+    /// copied before this existed get their words too. Once per picture.
+    func wantCaption(for image: ClipImage) {
+        guard isEnabled, image.caption == nil,
+              captionsAsked.insert(image.digest).inserted else { return }
+        captionQueue.append(image)
+        readNextCaption()
+    }
+
+    private func readNextCaption() {
+        guard !readingCaption, !captionQueue.isEmpty else { return }
+        let image = captionQueue.removeFirst()
+        readingCaption = true
+        let images = self.images
+        let generation = self.generation
+        // Reading the file is off the main thread; the words then come back to
+        // it, one picture at a time.
+        imageQueue.async {
+            let data = images.data(for: image)
+            Task { @MainActor in
+                guard let data, self.generation == generation else {
+                    self.readingCaption = false
+                    self.readNextCaption()
+                    return
+                }
+                FastReader.read(data, background: true) { words in
+                    self.readingCaption = false
+                    if self.generation == generation {
+                        let caption = words.trimmingCharacters(in: .whitespacesAndNewlines)
+                        self.apply(self.history.captioning(image.digest, with: caption))
+                    }
+                    self.readNextCaption()
+                }
             }
         }
     }
@@ -166,6 +211,8 @@ final class ClipboardController: ObservableObject {
         pendingSave?.cancel()
         pendingSave = nil
         history = .empty
+        captionQueue.removeAll()
+        captionsAsked.removeAll()
         store.delete()
         thumbnails.removeAllObjects()
         FileThumbnails.shared.clear()
@@ -221,6 +268,7 @@ final class ClipboardController: ObservableObject {
                     // swept at the next load.
                     guard let image, self.isEnabled, self.generation == generation else { return }
                     self.apply(self.history.adding(image: image, source: source, at: Date()))
+                    self.wantCaption(for: image)
                 }
             }
         }

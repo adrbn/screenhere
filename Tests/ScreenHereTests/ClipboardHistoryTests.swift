@@ -245,6 +245,67 @@ final class ClipboardHistoryTests: XCTestCase {
         let data = try JSONEncoder().encode(history)
         XCTAssertEqual(try JSONDecoder().decode(ClipboardHistory.self, from: data), history)
     }
+
+    // MARK: - What was read in a picture
+
+    private func captioned(_ caption: String) -> ClipboardHistory {
+        ClipboardHistory.empty
+            .adding(image: image("a"), source: "Safari", at: t0)
+            .captioning("a", with: caption)
+    }
+
+    func testCaptioningKeepsTheOriginalUntouched() {
+        let original = ClipboardHistory.empty.adding(image: image("a"), source: nil, at: t0)
+        _ = original.captioning("a", with: "Vimeo targeting")
+        XCTAssertNil(original.items.first?.image?.caption)
+    }
+
+    func testCaptioningOnlyTheMatchingPicture() {
+        let history = ClipboardHistory.empty
+            .adding(image: image("a"), source: nil, at: t0)
+            .adding(image: image("b"), source: nil, at: t0.addingTimeInterval(1))
+            .captioning("a", with: "words")
+        XCTAssertEqual(history.items.map { $0.image?.caption }, [nil, "words"])
+    }
+
+    /// Read once: a second reading cannot overwrite what the first found.
+    func testAnAlreadyReadPictureKeepsItsWords() {
+        let history = captioned("Vimeo targeting").captioning("a", with: "something else")
+        XCTAssertEqual(history.items.first?.image?.caption, "Vimeo targeting")
+    }
+
+    /// Nothing to read is still read: empty, not nil, so the picture is not
+    /// looked at again on every launch.
+    func testNothingToReadIsRecordedAsEmpty() {
+        let history = captioned("")
+        XCTAssertEqual(history.items.first?.image?.caption, "")
+        XCTAssertNil(history.items.first?.image?.captionLine)
+    }
+
+    func testTheRowShowsTheFirstLineThatHasWords() {
+        XCTAssertEqual(captioned("\n  \n  Vimeo targeting  \nAudience\n").items.first?.image?.captionLine,
+                       "Vimeo targeting")
+    }
+
+    func testAPictureIsFoundByWhatWasReadInIt() {
+        let history = captioned("Vimeo targeting\nAudience")
+        XCTAssertEqual(history.matching("targeting").count, 1)
+        XCTAssertEqual(history.matching("audience vimeo").count, 1)
+        XCTAssertTrue(history.matching("youtube").isEmpty)
+    }
+
+    /// Pictures stay findable as "image" and by the app they came from, read
+    /// or not.
+    func testAPictureIsStillFoundTheOldWays() {
+        XCTAssertEqual(captioned("").matching("image safari").count, 1)
+    }
+
+    func testWordsSurviveSavingAndLoading() throws {
+        let history = captioned("Vimeo targeting")
+        let copy = try JSONDecoder().decode(ClipboardHistory.self,
+                                            from: try JSONEncoder().encode(history))
+        XCTAssertEqual(copy.items.first?.image?.caption, "Vimeo targeting")
+    }
 }
 
 /// How a copied file reads in the list: its name, and the folder it sits in

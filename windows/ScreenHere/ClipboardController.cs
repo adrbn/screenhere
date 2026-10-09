@@ -135,6 +135,12 @@ internal sealed class ClipboardController
     /// history was cleared does not come back into it.
     private int generation;
     private bool posed;
+    /// Pictures still to be read, the digests already asked for, and whether
+    /// one is being read: one at a time, so a list full of old screenshots
+    /// does not read them all at once.
+    private readonly Queue<ClipImage> captionQueue = new();
+    private readonly HashSet<string> captionsAsked = [];
+    private bool readingCaption;
 
     private ClipboardController()
     {
@@ -286,7 +292,11 @@ internal sealed class ClipboardController
                 {
                     // Turned off or cleared meanwhile: a file left behind is
                     // swept at the next load.
-                    if (image != null && IsEnabled && generation == started) Apply(History.Adding(image, source, DateTime.Now));
+                    if (image != null && IsEnabled && generation == started)
+                    {
+                        Apply(History.Adding(image, source, DateTime.Now));
+                        WantCaption(image);
+                    }
                     SyncController.Shared.LocalCopy(png);
                 });
             }
@@ -344,7 +354,11 @@ internal sealed class ClipboardController
             var image = images.Ingest(png);
             Application.Current?.Dispatcher.BeginInvoke(() =>
             {
-                if (IsEnabled && generation == started) Apply(History.Adding(image, source, DateTime.Now));
+                if (IsEnabled && generation == started)
+                {
+                    Apply(History.Adding(image, source, DateTime.Now));
+                    WantCaption(image);
+                }
             });
         });
     }
@@ -361,7 +375,11 @@ internal sealed class ClipboardController
             var image = images.Ingest(png);
             Application.Current?.Dispatcher.BeginInvoke(() =>
             {
-                if (IsEnabled && generation == started) Apply(History.Adding(image, source, DateTime.Now));
+                if (IsEnabled && generation == started)
+                {
+                    Apply(History.Adding(image, source, DateTime.Now));
+                    WantCaption(image);
+                }
             });
         });
     }
@@ -399,6 +417,38 @@ internal sealed class ClipboardController
         return true;
     }
 
+    /// Reads the words in a picture, for its row's title and for the search.
+    /// Asked for by a new copy and by the list as rows appear, so pictures
+    /// copied before this existed get their words too. Once per picture.
+    public void WantCaption(ClipImage image)
+    {
+        if (!IsEnabled || posed || image.Caption != null || !captionsAsked.Add(image.Digest)) return;
+        captionQueue.Enqueue(image);
+        ReadNextCaption();
+    }
+
+    private void ReadNextCaption()
+    {
+        if (readingCaption || captionQueue.Count == 0) return;
+        var image = captionQueue.Dequeue();
+        readingCaption = true;
+        var started = generation;
+        Task.Run(async () =>
+        {
+            var png = images.Data(image);
+            var words = png == null ? null : await TextRecognizer.Read(png);
+            Application.Current?.Dispatcher.BeginInvoke(() =>
+            {
+                readingCaption = false;
+                // Nothing read is recorded as empty, so the picture is not
+                // looked at again on every launch; a recogniser that could not
+                // run at all records nothing.
+                if (words != null && generation == started) Apply(History.Captioning(image.Digest, words.Trim()));
+                ReadNextCaption();
+            });
+        });
+    }
+
     public BitmapSource? Thumbnail(ClipImage image)
     {
         if (thumbnails.TryGetValue(image.Digest, out var cached)) return cached;
@@ -425,6 +475,8 @@ internal sealed class ClipboardController
         generation++;
         saveTimer.Stop();
         History = ClipboardHistory.Empty;
+        captionQueue.Clear();
+        captionsAsked.Clear();
         store.Delete();
         thumbnails.Clear();
         FileThumbnails.Shared.Clear();

@@ -465,7 +465,8 @@ struct ReadmeShots {
             .map { ClipFile(path: downloads.appendingPathComponent($0).path) }
         FileThumbnails.shared.pose([copiedFiles[0].path: page(140, 180)])
 
-        let shot = ClipImage(digest: "shot", format: .png, width: 1680, height: 1050, byteCount: 2_100_000)
+        let shot = ClipImage(digest: "shot", format: .png, width: 1680, height: 1050, byteCount: 2_100_000,
+                             caption: "Weekly active devices")
         let photo = ClipImage(digest: "photo", format: .jpeg, width: 1200, height: 1600, byteCount: 420_000)
         let history = ClipboardHistory.empty
             .adding("Thanks, see you Thursday!", source: "Messages", at: now.addingTimeInterval(-5400))

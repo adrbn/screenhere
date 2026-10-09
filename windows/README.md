@@ -27,7 +27,7 @@ No administrator rights, no account, nothing outside your user profile. ScreenHe
 | **Screen** | <kbd>Win</kbd><kbd>Shift</kbd><kbd>3</kbd> | Captures only the display the pointer is on, into your Screenshots folder. Add <kbd>Ctrl</kbd> to send it to the clipboard instead. |
 | **Window** (beta) | <kbd>Win</kbd><kbd>Shift</kbd><kbd>2</kbd> | Captures only the window under the pointer — whole, even when another window covers part of it. Off until you turn it on. |
 | **Text** | <kbd>Win</kbd><kbd>Shift</kbd><kbd>7</kbd> | Drag over anything on screen and its text is on your clipboard. Read on your PC by Windows' own recogniser: nothing is uploaded, no network needed. |
-| **History** | <kbd>Win</kbd><kbd>Shift</kbd><kbd>8</kbd> | The last 200 things you copied — text, images, files — in a list under your pointer. Type to filter, <kbd>Enter</kbd>, paste. Off until you turn it on. |
+| **History** | <kbd>Win</kbd><kbd>Shift</kbd><kbd>8</kbd> | The last 200 things you copied — text, images, files — in a list under your pointer. Type to filter, <kbd>Enter</kbd>, paste. Pictures are read on your PC, so a screenshot is listed by the words it shows and found by typing them. Off until you turn it on. |
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../docs/assets/windows-history-dark.png">

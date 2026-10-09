@@ -8,7 +8,14 @@ namespace ScreenHere;
 
 /// A copied picture. The bytes live in `ClipboardImageStore`, in a file named
 /// by the digest; the history only describes them.
-internal sealed record ClipImage(string Digest, int Width, int Height, long ByteCount);
+internal sealed record ClipImage(string Digest, int Width, int Height, long ByteCount, string? Caption = null)
+{
+    /// What a row can show of the words read in the picture: their first line,
+    /// null when it has not been read or there was nothing in it.
+    [JsonIgnore]
+    public string? CaptionLine =>
+        Caption?.Split('\n').Select(line => line.Trim()).FirstOrDefault(line => line.Length > 0);
+}
 
 /// A copied file, kept as a reference: its bytes stay where they are, so an
 /// entry can outlive the file it points at — and point at it again when an
@@ -94,6 +101,14 @@ internal sealed class ClipboardHistory
         return new ClipboardHistory(Items.Where(i => i.Files == null || !i.Files.SequenceEqual(files)).Prepend(item)).Trimmed();
     }
 
+    /// The words read in a picture, for its row's title and for the search.
+    /// The same picture copied twice is one reading's work: both entries take
+    /// it. An entry already read keeps what it has.
+    public ClipboardHistory Captioning(string digest, string caption) =>
+        new(Items.Select(item => item.Image is { Caption: null } image && image.Digest == digest
+            ? item with { Image = image with { Caption = caption } }
+            : item));
+
     public ClipboardHistory Removing(Guid id) => Filtering(i => i.Id != id);
 
     public ClipboardHistory Filtering(Func<ClipItem, bool> isIncluded) => new(Items.Where(isIncluded));
@@ -135,13 +150,13 @@ internal sealed class ClipboardHistory
         return new ClipboardHistory(kept);
     }
 
-    /// Pictures have no words of their own: they are found as "image" or by
-    /// the app they came from. Files are found by their whole path, so a
-    /// folder's name finds everything copied out of it.
+    /// A picture is found by the words read in it, by "image", or by the app
+    /// it came from. Files are found by their whole path, so a folder's name
+    /// finds everything copied out of it.
     private static string SearchableText(ClipItem item)
     {
         if (item.Text != null) return item.Text;
-        if (item.Image is { } image) return $"image {image.Width}×{image.Height} {item.Source}";
+        if (item.Image is { } image) return $"image {image.Width}×{image.Height} {image.Caption} {item.Source}";
         return $"{string.Join(" ", item.Files!.Select(f => f.Path))} {item.Source}";
     }
 

@@ -11,9 +11,6 @@ enum TextCapture {
     /// Ready, the reader answers in well under a second; past this something
     /// is wrong with it, and the fast engine answers instead.
     private static let accurateDeadline: TimeInterval = 3
-    /// The fast engine answers in a fraction of a second; past this it is
-    /// stuck, and a stuck reader holds ⇧⌘7 until it is killed.
-    private static let fastLimit: TimeInterval = 20
 
     static func run() {
         guard !busy else { return }
@@ -60,44 +57,9 @@ enum TextCapture {
     }
 
     /// The fast engine reads in a throwaway process — see `FastReadService`
-    /// for why no Vision runs in ScreenHere itself. An empty answer is what a
-    /// capture with no text gives: both say so the same way.
+    /// for why.
     private static func recognizeFast(_ capture: Data) {
-        guard let executable = Bundle.main.executableURL else {
-            finish("")
-            return
-        }
-        let process = Process()
-        process.executableURL = executable
-        process.arguments = [FastReadService.argument]
-        process.qualityOfService = .userInitiated
-        let input = Pipe()
-        let output = Pipe()
-        process.standardInput = input
-        process.standardOutput = output
-        process.standardError = FileHandle.nullDevice
-        // A reader that died must fail the write, not kill ScreenHere.
-        _ = fcntl(input.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
-        do {
-            try process.run()
-        } catch {
-            finish("")
-            return
-        }
-        DispatchQueue.global(qos: .userInitiated).async {
-            try? input.fileHandleForWriting.write(contentsOf: capture)
-            try? input.fileHandleForWriting.close()
-            // The reader answers once it has the whole capture, so writing it
-            // all and then reading cannot deadlock on the pipes.
-            let text = ((try? output.fileHandleForReading.readToEnd()) ?? nil)
-                .map { String(decoding: $0, as: UTF8.self) } ?? ""
-            Task { @MainActor in finish(text) }
-        }
-        // A reader stuck on the Neural Engine must not take ⇧⌘7 with it: killing
-        // it closes the pipe, and the read above ends.
-        DispatchQueue.main.asyncAfter(deadline: .now() + fastLimit) {
-            if process.isRunning { process.terminate() }
-        }
+        FastReader.read(capture) { finish($0) }
     }
 
     private static func finish(_ text: String) {
