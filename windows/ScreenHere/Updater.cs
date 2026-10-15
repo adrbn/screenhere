@@ -102,7 +102,11 @@ internal sealed class Updater
     }
 
     /// How far the download is, from 0 to 1, while an update is installing.
+    /// It stays at 0 when the server announces no size, which is why how much
+    /// has arrived is kept too: a label that never moves cannot be told apart
+    /// from an update that has stopped.
     public double Progress { get; private set; }
+    public long Downloaded { get; private set; }
 
     /// Downloads the new build next to the running one, swaps them and
     /// restarts. The shortcuts are back as soon as the new copy is up.
@@ -118,9 +122,11 @@ internal sealed class Updater
             return;
         }
         Progress = 0;
+        Downloaded = 0;
         Set(Status.Installing, notify: true);
         var fresh = running + ".new";
         var old = running + ".old";
+        Trace($"install {CurrentVersion} -> {AvailableVersion} at {running}");
         try
         {
             // Off the interface's thread: seventy megabytes written a chunk at
@@ -138,13 +144,18 @@ internal sealed class Updater
                     File.Delete(old);
                     File.Move(running, old);
                     File.Move(fresh, running);
+                    Trace("swapped");
                 }
+                else Trace("already swapped, nothing to fetch");
                 await Relaunch(running);
             });
+            Trace("quitting");
             ((App)System.Windows.Application.Current).Quit();
+            Trace("quit");
         }
-        catch
+        catch (Exception error)
         {
+            Trace("failed: " + error);
             try { File.Delete(fresh); } catch { }
             Set(Status.Idle, notify: true);
             // The new build may be in place all the same: opening ScreenHere
@@ -163,31 +174,38 @@ internal sealed class Updater
         // A line that goes quiet for a minute has stopped, and waiting on it
         // for ever is how an update sits on "Updating…" until the app is killed.
         using var stall = new CancellationTokenSource(Stall);
+        Trace("fetching " + url);
         using var response = await Downloads.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, stall.Token);
         response.EnsureSuccessStatusCode();
         var total = response.Content.Headers.ContentLength ?? 0;
+        Trace($"{(int)response.StatusCode}, {total} bytes announced");
         await using (var source = await response.Content.ReadAsStreamAsync(stall.Token))
         await using (var file = new FileStream(target, FileMode.Create, FileAccess.Write,
                                                FileShare.None, 128 * 1024, useAsync: true))
         {
             var buffer = new byte[128 * 1024];
             long done = 0;
-            var shown = 0.0;
+            var shown = 0L;
             int read;
             while ((read = await source.ReadAsync(buffer, stall.Token)) > 0)
             {
                 await file.WriteAsync(buffer.AsMemory(0, read), stall.Token);
                 stall.CancelAfter(Stall);
                 done += read;
-                if (total <= 0 || (double)done / total - shown < 0.01) continue;
-                Progress = shown = (double)done / total;
+                // Either way the label moves: a share of the whole when the
+                // whole was announced, megabytes when it was not.
+                if (done - shown < (total > 0 ? total / 100 : 1_000_000)) continue;
+                shown = done;
+                Downloaded = done;
+                Progress = total > 0 ? (double)done / total : 0;
                 Notify();
             }
+            Trace($"{done} bytes written");
         }
         var head = new byte[2];
         await using (var check = File.OpenRead(target))
         {
-            if (check.Length < 100_000 || await check.ReadAsync(head) < 2 || head[0] != 'M' || head[1] != 'Z') throw new InvalidDataException();
+            if (check.Length < 100_000 || await check.ReadAsync(head) < 2 || head[0] != 'M' || head[1] != 'Z') throw new InvalidDataException($"{check.Length} bytes, not a program");
         }
     }
 
@@ -201,10 +219,12 @@ internal sealed class Updater
             try
             {
                 Process.Start(new ProcessStartInfo(running, "--updated") { UseShellExecute = false });
+                Trace($"started, try {attempt + 1}");
                 return;
             }
-            catch when (attempt < 20)
+            catch (Exception error) when (attempt < 20)
             {
+                Trace($"try {attempt + 1} refused: {error.Message}");
                 await Task.Delay(750);
             }
         }
@@ -215,6 +235,21 @@ internal sealed class Updater
         try
         {
             if (Environment.ProcessPath is { } running) File.Delete(running + ".old");
+        }
+        catch
+        {
+        }
+    }
+
+    /// Every step of an update, as it happens, next to the settings. An
+    /// update that goes wrong is over by the time anyone can look at it, so
+    /// the looking is done afterwards, here.
+    private static void Trace(string step)
+    {
+        try
+        {
+            Directory.CreateDirectory(Settings.Folder);
+            File.AppendAllText(Path.Combine(Settings.Folder, "update.log"), $"{DateTime.Now:HH:mm:ss} {step}\n");
         }
         catch
         {
