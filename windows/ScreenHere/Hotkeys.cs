@@ -223,13 +223,6 @@ internal static class Hotkeys
     /// Takes over every shortcut in `shortcuts`, and only those.
     public static void Rebind(Dictionary<KeyShortcut, Action> shortcuts) => bindings = shortcuts;
 
-    /// While the frost is down, Win+Ctrl+Left and Win+Ctrl+Right go nowhere:
-    /// a cover belongs to the desktop it was made on, so the next desktop
-    /// would show through it. The touchpad's own four-finger swipe is the
-    /// shell's and no hook sees it.
-    public static bool HoldDesktop { get => holdDesktop; set => holdDesktop = value; }
-    private static volatile bool holdDesktop;
-
     private static IntPtr Handle(int code, IntPtr wParam, IntPtr lParam)
     {
         if (code < 0) return Native.CallNextHookEx(hook, code, wParam, lParam);
@@ -263,13 +256,6 @@ internal static class Hotkeys
         {
             Swallow(key, modifiers);
             dispatcher?.BeginInvoke(() => typing(key, modifiers));
-            return 1;
-        }
-
-        if (holdDesktop && (key == 0x25 || key == 0x27)
-            && modifiers.HasFlag(Modifiers.Win) && modifiers.HasFlag(Modifiers.Control))
-        {
-            Swallowed.Add(key);
             return 1;
         }
 

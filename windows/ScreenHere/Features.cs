@@ -69,13 +69,6 @@ internal static class Features
         ScreenBlur.Update();
     }
 
-    public static void SetHoldsDesktop(bool on)
-    {
-        Settings.BlurHoldsDesktop = on;
-        Change();
-        ScreenBlur.Update();
-    }
-
     /// Turning this on also covers the captures other tools save, so every
     /// capture gets its preview.
     public static void SetPreview(bool on)

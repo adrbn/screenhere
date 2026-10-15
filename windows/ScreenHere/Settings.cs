@@ -22,7 +22,6 @@ internal sealed class Settings
     public bool BlurEnabled { get; set; }
     /// On top of the shortcut, frost the displays the pointer is not on.
     public bool BlurOtherScreens { get; set; }
-    public bool BlurHoldsDesktop { get; set; }
     /// Where Win+Shift+3 sends a capture: the Screenshots folder, or the clipboard.
     public bool CapturesToClipboard { get; set; }
     /// The shared clipboard: off until turned on, and nothing to share with

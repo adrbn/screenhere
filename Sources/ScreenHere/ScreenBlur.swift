@@ -3,7 +3,6 @@ import AppKit
 enum BlurPrefs {
     static let enabledKey = "BlurEnabled"
     static let othersKey = "BlurOtherScreensEnabled"
-    static let holdKey = "BlurHoldsDesktopEnabled"
 }
 
 /// Frosts the screen, so what is on it cannot be read from across the desk.
@@ -21,8 +20,6 @@ final class ScreenBlur: ObservableObject {
     @Published private(set) var isCurtain = false
     /// Frost the displays the pointer is away from, on its own.
     @Published private(set) var blursOthers = false
-    /// Keep the desktop from sliding while the frost is down (beta).
-    @Published private(set) var holdsDesktop = false
     /// ⇧⌘9 is registered by another app.
     @Published private(set) var shortcutUnavailable = false
 
@@ -40,6 +37,8 @@ final class ScreenBlur: ObservableObject {
     /// When the pointer was last on each display.
     private var lastSeen: [CGDirectDisplayID: Date] = [:]
     private var covered: Set<CGDirectDisplayID> = []
+    /// Displays taken over for the curtain, to give back when it lifts.
+    private var seized: Set<CGDirectDisplayID> = []
     private var timer: Timer?
     private var screenObserver: NSObjectProtocol?
 
@@ -61,7 +60,6 @@ final class ScreenBlur: ObservableObject {
     func activate() {
         isEnabled = UserDefaults.standard.bool(forKey: BlurPrefs.enabledKey)
         blursOthers = UserDefaults.standard.bool(forKey: BlurPrefs.othersKey)
-        holdsDesktop = UserDefaults.standard.bool(forKey: BlurPrefs.holdKey)
         update()
     }
 
@@ -80,19 +78,13 @@ final class ScreenBlur: ObservableObject {
         update()
     }
 
-    func setHoldsDesktop(_ on: Bool) {
-        UserDefaults.standard.set(on, forKey: BlurPrefs.holdKey)
-        holdsDesktop = on
-        // Nothing else in ScreenHere wants Accessibility, so it is asked for
-        // here and nowhere else.
-        if on, !SwipeGuard.isAllowed { SwipeGuard.ask() }
-        update()
-    }
-
     /// ⇧⌘9: the frost over every display, and off again.
     func toggleCurtain() {
         guard isEnabled else { return }
         isCurtain.toggle()
+        // The curtain's covers hold the display; the automatic ones do not,
+        // so any already on screen are taken down and made again.
+        apply([])
         update()
     }
 
@@ -108,12 +100,12 @@ final class ScreenBlur: ObservableObject {
     func stop() {
         registrar.unbindAll()
         isCurtain = false
-        SwipeGuard.stop()
         timer?.invalidate()
         timer = nil
         for window in windows.values { window.orderOut(nil) }
         windows.removeAll()
         covered.removeAll()
+        release()
     }
 
     /// Brings the shortcut, the pointer timer and the overlays in line with
@@ -124,7 +116,6 @@ final class ScreenBlur: ObservableObject {
             MainActor.assumeIsolated { ScreenBlur.shared.toggleCurtain() }
         }
         if isEnabled, #available(macOS 14.0, *) { Task { await ScreenShade.warm() } }
-        if isCurtain && holdsDesktop { SwipeGuard.start() } else { SwipeGuard.stop() }
 
         if isEnabled && blursOthers {
             if timer == nil {
@@ -187,6 +178,11 @@ final class ScreenBlur: ObservableObject {
     private func apply(_ wanted: Set<CGDirectDisplayID>) {
         guard wanted != covered else { return }
         covered = wanted
+        let curtain = isCurtain
+        // Given back while the frost still hides the screen: leaving capture
+        // blanks the display for an instant, and that instant belongs behind
+        // the frost rather than in front of it.
+        if wanted.isEmpty { release() }
         for (id, window) in windows where !wanted.contains(id) {
             windows[id] = nil
             fade(window, to: 0, over: Self.fadeOut) { window.orderOut(nil) }
@@ -196,7 +192,7 @@ final class ScreenBlur: ObservableObject {
             let window = Self.overlay(over: screen)
             windows[id] = window
             guard #available(macOS 14.0, *) else {
-                show(window)
+                show(window, over: id, seizing: false)
                 continue
             }
             // The picture is taken before anything is on screen, and the
@@ -205,14 +201,41 @@ final class ScreenBlur: ObservableObject {
                 let shade = await ScreenShade.blurred(display: id)
                 guard let self, self.windows[id] === window else { return }
                 if let shade { window.contentView = Self.picture(shade, over: screen) }
-                self.show(window)
+                self.show(window, over: id, seizing: curtain && shade != nil)
             }
         }
     }
 
-    private func show(_ window: NSWindow) {
+    /// Sliding between desktops is animated by the window server, which draws
+    /// none of our windows while it does — whatever their level, as measuring
+    /// it showed — so the frost blinks off at the one moment it must not.
+    /// Holding the display stops the slide happening at all, which is what a
+    /// curtain is for: nothing moves, nothing shows.
+    ///
+    /// Only the curtain holds it, and only with a picture to hold it with: a
+    /// held display composes nothing but this window, so an empty one would
+    /// leave a black screen. The automatic frost never holds anything — it is
+    /// on all day, and a Mac whose desktops are stuck all day is worse than a
+    /// frost that blinks.
+    private func show(_ window: NSWindow, over id: CGDirectDisplayID, seizing: Bool) {
         window.orderFrontRegardless()
-        fade(window, to: 1, over: Self.fadeIn)
+        fade(window, to: 1, over: Self.fadeIn) { [weak self] in
+            // Once the frost is all the way up: entering capture blanks the
+            // display for an instant, which belongs behind it.
+            guard seizing, let self, self.windows[id] === window else { return }
+            window.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
+            if CGDisplayCaptureWithOptions(id, .noFill) == .success {
+                self.seized.insert(id)
+            } else {
+                window.level = .screenSaver
+            }
+        }
+    }
+
+    /// Gives back every display the curtain held.
+    private func release() {
+        for id in seized { CGDisplayRelease(id) }
+        seized.removeAll()
     }
 
     private func fade(_ window: NSWindow, to alpha: CGFloat,

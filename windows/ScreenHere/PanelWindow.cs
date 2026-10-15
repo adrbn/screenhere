@@ -468,12 +468,6 @@ internal sealed class PanelWindow : Window
                     $"On top of {Features.Shortcut(Feature.Blur).Label}, frost every display the pointer is not "
                     + "on by itself. A screen clears the moment your pointer arrives, and frosts again a second "
                     + "after it leaves.")));
-            options.Children.Add(Row(Ui.Icon(Glyph.Pause, 12), "Hold the desktop still", beta: true,
-                trailing: Switch(settings.BlurHoldsDesktop, Features.SetHoldsDesktop,
-                    "While the frost is down, stop Win+Ctrl+Left and Win+Ctrl+Right from changing "
-                    + "desktop. A cover belongs to the desktop it was made on, so the next one would "
-                    + "show through it. The touchpad's four-finger swipe is the shell's own and "
-                    + "cannot be stopped.")));
         }
         options.Children.Add(Row(Ui.Icon(Glyph.Power, 12), "Launch at login",
             trailing: Switch(LoginItem.IsEnabled, on =>
