@@ -21,6 +21,20 @@ struct PanelView: View {
     @State private var page: PanelPage?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// `start` is the room to open on, which only the documentation shots ask
+    /// for: the panel itself always opens at the front.
+    init(model: PanelModel, onRestoreShortcuts: @escaping () -> Void, onHideIcon: @escaping () -> Void,
+         onCheckUpdates: @escaping () -> Void, onOpenGitHub: @escaping () -> Void,
+         onQuit: @escaping () -> Void, start: PanelPage? = nil) {
+        self.model = model
+        self.onRestoreShortcuts = onRestoreShortcuts
+        self.onHideIcon = onHideIcon
+        self.onCheckUpdates = onCheckUpdates
+        self.onOpenGitHub = onOpenGitHub
+        self.onQuit = onQuit
+        _page = State(initialValue: start)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let page {

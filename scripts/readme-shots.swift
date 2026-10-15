@@ -485,6 +485,8 @@ struct ReadmeShots {
 
         let panelView = PanelView(model: model, onRestoreShortcuts: {}, onHideIcon: {},
                                   onCheckUpdates: {}, onOpenGitHub: {}, onQuit: {})
+        let roomView = PanelView(model: model, onRestoreShortcuts: {}, onHideIcon: {},
+                                 onCheckUpdates: {}, onOpenGitHub: {}, onQuit: {}, start: .privacy)
         let picker = HistoryPickerModel(clipboard: .shared)
         picker.selection = 1
 
@@ -498,6 +500,10 @@ struct ReadmeShots {
                                     .background(dark ? Color(white: 0.155).opacity(0.94) : Color(white: 0.975).opacity(0.93)),
                                  width: 320, dark: dark, background: .clear)
             export(ShotHero(panel: panel, dark: dark), dark: dark, to: "\(out)/hero-\(name).png")
+            let room = snapshot(roomView.padding(.vertical, 4)
+                                    .background(dark ? Color(white: 0.155).opacity(0.94) : Color(white: 0.975).opacity(0.93)),
+                                width: 320, dark: dark, background: .clear)
+            export(ShotHero(panel: room, dark: dark), dark: dark, to: "\(out)/room-\(name).png")
             export(CaptureScene(dark: dark), dark: dark, to: "\(out)/capture-\(name).png")
             export(TextScene(dark: dark), dark: dark, to: "\(out)/text-\(name).png")
             let pickerImage = snapshot(HistoryPickerView(model: picker, clipboard: .shared, links: .shared,

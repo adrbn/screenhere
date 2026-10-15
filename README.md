@@ -96,6 +96,15 @@ Switch on **Blur the screens you're not on** underneath and the other displays f
 
 The frost is a real blur of your screen: ScreenHere takes one small picture of each display as the frost comes down, blurs it, and shows that. The picture lives in memory for as long as the frost does and is never written anywhere — not to the history, not to disk. It uses the Screen Recording permission the app already has; without it, or before macOS 14, you get the window server's frosted sheet instead. Windows works the same way, with its own screen capture; if a screen cannot be pictured at all, the cover is a flat veil instead. Off until you turn it on.
 
+## One room at a time
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/room-dark.png">
+  <img src="docs/assets/room-light.png" width="470" alt="The panel open on its Privacy screen room: the two frosting settings, each with a line saying what it does, and the way back in the corner" />
+</picture>
+
+Everything you can change sits behind three doors — Captures, Privacy screen, Clipboard. The panel shows one room at a time, so it no longer grows taller with every feature you switch on, and a setting has the space for the line that says what it does instead of a tooltip you had to find.
+
 ## On Windows
 
 <picture>
