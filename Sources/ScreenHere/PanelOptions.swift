@@ -74,23 +74,18 @@ struct PanelOptions: View {
         PanelRow(icon: "photo.on.rectangle.angled", title: "Preview on captured screen") {
             toggle(isOn: model.showsOwnPreview, set: { model.setOwnPreview($0) })
         }
-        note("The preview appears on the screen the capture came from, instead of "
-             + "wherever macOS puts it. Click it to find the file, drag it into another "
-             + "app, or flick it to the right to dismiss it.")
+        note("Click it to find the file, drag it into another app, or flick it right to dismiss.")
     }
 
     @ViewBuilder private var privacy: some View {
         PanelRow(icon: "rectangle.on.rectangle.slash", title: "Blur the screens you're not on") {
             toggle(isOn: blur.blursOthers, set: blur.setBlursOthers)
         }
-        note("On top of ⇧⌘9, frost every display the pointer is not on by itself. A screen "
-             + "clears the moment your pointer arrives, and frosts again a second after it leaves.")
+        note("A display frosts a second after the pointer leaves it, and clears when it returns.")
         PanelRow(icon: "hand.raised", title: "Freeze the desktop", beta: true) {
             toggle(isOn: blur.holdsDisplay, set: blur.setHoldsDisplay)
         }
-        note("While ⇧⌘9 is down, hold every frosted display so macOS cannot slide to another "
-             + "desktop — the frost can no longer blink off mid-swipe. Taking a display over "
-             + "flashes it for an instant as the curtain comes down.")
+        note("Stops macOS sliding to another desktop mid-swipe. Flashes once as the frost falls.")
     }
 
     @ViewBuilder private var clipboardSettings: some View {
@@ -98,9 +93,7 @@ struct PanelOptions: View {
             PanelRow(icon: "link", title: "Link previews", beta: true) {
                 toggle(isOn: links.isEnabled, set: links.setEnabled)
             }
-            note("Show the title and icon of copied links in the list. ScreenHere visits a link "
-                 + "when the list shows it, without cookies, and never one that looks private or "
-                 + "single-use. The site sees the visit, as it would if you opened the link.")
+            note("The link is opened without cookies, never a private one. The site sees the visit.")
         }
         sharedClipboard
     }

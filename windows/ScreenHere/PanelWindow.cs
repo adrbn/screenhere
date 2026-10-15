@@ -36,6 +36,10 @@ internal sealed class PanelWindow : Window
     private readonly Canvas map = new() { Height = 88, Margin = new Thickness(0, 10, 0, 0) };
     private readonly ContentControl destination = new() { Focusable = false };
     private readonly Grid tiles = new();
+    /// The panel as it opens: what the app does, and the way in to the rooms.
+    private readonly StackPanel hall = new();
+    /// The room on show, or none for the panel as it opens.
+    private string? room;
     private readonly StackPanel options = new() { Margin = new Thickness(6, 0, 6, 0) };
     private readonly ContentControl update = new() { Focusable = false };
     private readonly DispatcherTimer poll = new() { Interval = TimeSpan.FromMilliseconds(100) };
@@ -189,10 +193,12 @@ internal sealed class PanelWindow : Window
     private UIElement Build()
     {
         var root = new StackPanel { Width = PanelWidth };
-        root.Children.Add(Hero());
-        root.Children.Add(SectionTitle("Shortcuts"));
+        hall.Children.Add(Hero());
+        hall.Children.Add(SectionTitle("Shortcuts"));
         tiles.Margin = new Thickness(10, 0, 10, 0);
-        root.Children.Add(tiles);
+        hall.Children.Add(tiles);
+        root.Children.Add(hall);
+        root.Children.Add(back);
         root.Children.Add(options.With(o => o.Margin = new Thickness(0, 10, 0, 0)));
         root.Children.Add(new Border { Height = 1, Margin = new Thickness(12, 6, 12, 0) }
             .With(b => b.SetResourceReference(Border.BackgroundProperty, "P10")));
@@ -200,10 +206,23 @@ internal sealed class PanelWindow : Window
         return root;
     }
 
-    /// Names what the settings under it change. The first one needs no gap
-    /// above it: the tiles already left one.
-    private static TextBlock Group(string text, bool first = false) =>
-        Ui.Text(text, 11, FontWeights.SemiBold, "Secondary").With(t => t.Margin = new Thickness(14, first ? 0 : 9, 14, 3));
+    /// The way out of a room, in the corner every panel puts it in.
+    private readonly ContentControl back = new() { Focusable = false, Visibility = Visibility.Collapsed };
+
+    private void Enter(string? name)
+    {
+        room = name;
+        hall.Visibility = name == null ? Visibility.Visible : Visibility.Collapsed;
+        back.Visibility = name == null ? Visibility.Collapsed : Visibility.Visible;
+        if (name != null)
+        {
+            var label = new StackPanel { Orientation = Orientation.Horizontal };
+            label.Children.Add(Ui.Icon(Glyph.Back, 11, "BrandText").With(e => e.VerticalAlignment = VerticalAlignment.Center));
+            label.Children.Add(Ui.Text(name, 12, FontWeights.SemiBold, "BrandText").With(t => t.Margin = new Thickness(3, 0, 0, 1)));
+            back.Content = Ui.Press("Row", label, () => Enter(null)).With(b => b.Margin = new Thickness(6, 4, 6, 0));
+        }
+        RefreshOptions();
+    }
 
     private static TextBlock SectionTitle(string text) =>
         Ui.Text(text, 11, FontWeights.SemiBold, "Secondary").With(t => t.Margin = new Thickness(14, 0, 14, 6));
@@ -463,40 +482,61 @@ internal sealed class PanelWindow : Window
         var clipboard = ClipboardController.Shared;
         options.Children.Clear();
 
-        // Each setting sits under the feature it changes, shortcuts included:
-        // keyboards differ, and so do the shortcuts other apps got to first.
-        options.Children.Add(Group("Captures", first: true));
-        if (Features.IsOn(Feature.Screen)) options.Children.Add(Row(Ui.Icon(Glyph.Display, 12), "Screen shortcut", trailing: Recorder(Feature.Screen)));
-        if (Features.IsOn(Feature.Window)) options.Children.Add(Row(Ui.Stroked(Glyph.Window, 12.5), "Window shortcut", trailing: Recorder(Feature.Window)));
-        if (Features.IsOn(Feature.Text)) options.Children.Add(Row(Ui.Stroked(Glyph.TextViewfinder, 12.5), "Text shortcut", trailing: Recorder(Feature.Text)));
-        options.Children.Add(Row(Ui.Icon(Glyph.Picture, 12), "Preview on captured screen",
-            trailing: Switch(settings.PreviewOnCapturedScreen, Features.SetPreview,
-                "Show a preview of each capture on the screen it came from. Click it to find the file, "
-                + "drag it into another app, or flick it to the right to dismiss it.")));
-
-        if (Features.IsOn(Feature.Blur))
+        if (room == null)
         {
-            options.Children.Add(Group("Privacy screen"));
-            options.Children.Add(Row(Ui.Icon(Glyph.Hide, 12), "Blur shortcut", trailing: Recorder(Feature.Blur)));
-            options.Children.Add(Row(Ui.Icon(Glyph.Lock, 12), "Blur the screens you're not on",
-                trailing: Switch(settings.BlurOtherScreens, Features.SetBlursOthers,
-                    $"On top of {Features.Shortcut(Feature.Blur).Label}, frost every display the pointer is not "
-                    + "on by itself. A screen clears the moment your pointer arrives, and frosts again a second "
-                    + "after it leaves.")));
+            // A frosted screen is the only room that is empty when its feature
+            // is off.
+            Door("Captures", Glyph.Display);
+            if (Features.IsOn(Feature.Blur)) Door("Privacy screen", Glyph.Hide);
+            Door("Clipboard", Glyph.Paste);
+            return;
         }
 
-        options.Children.Add(Group("Clipboard"));
+        if (room == "Captures")
+        {
+            // Each setting sits under the feature it changes, shortcuts
+            // included: keyboards differ, and so do the shortcuts other apps
+            // got to first.
+            if (Features.IsOn(Feature.Screen)) options.Children.Add(Row(Ui.Icon(Glyph.Display, 12), "Screen shortcut", trailing: Recorder(Feature.Screen)));
+            if (Features.IsOn(Feature.Window)) options.Children.Add(Row(Ui.Stroked(Glyph.Window, 12.5), "Window shortcut", trailing: Recorder(Feature.Window)));
+            if (Features.IsOn(Feature.Text)) options.Children.Add(Row(Ui.Stroked(Glyph.TextViewfinder, 12.5), "Text shortcut", trailing: Recorder(Feature.Text)));
+            options.Children.Add(Row(Ui.Icon(Glyph.Picture, 12), "Preview on captured screen",
+                trailing: Switch(settings.PreviewOnCapturedScreen, Features.SetPreview)));
+            options.Children.Add(Note("Click it to find the file, drag it into another app, or flick it right to dismiss."));
+            return;
+        }
+
+        if (room == "Privacy screen")
+        {
+            options.Children.Add(Row(Ui.Icon(Glyph.Hide, 12), "Blur shortcut", trailing: Recorder(Feature.Blur)));
+            options.Children.Add(Row(Ui.Icon(Glyph.Lock, 12), "Blur the screens you're not on",
+                trailing: Switch(settings.BlurOtherScreens, Features.SetBlursOthers)));
+            options.Children.Add(Note("A display frosts a second after the pointer leaves it, and clears when it returns."));
+            return;
+        }
+
         if (Features.IsOn(Feature.History)) options.Children.Add(Row(Ui.Icon(Glyph.History, 12), "History shortcut", trailing: Recorder(Feature.History)));
         if (clipboard.IsEnabled)
         {
             options.Children.Add(Row(Ui.Icon(Glyph.Link, 12), "Link previews", beta: true,
-                trailing: Switch(LinkPreviews.Shared.IsEnabled, LinkPreviews.Shared.SetEnabled,
-                    "Show the title and icon of copied links in the list. ScreenHere visits a link when the list "
-                    + "shows it, without cookies, and never one that looks private or single-use. The site sees "
-                    + "the visit, as it would if you opened the link.")));
+                trailing: Switch(LinkPreviews.Shared.IsEnabled, LinkPreviews.Shared.SetEnabled)));
+            options.Children.Add(Note("The link is opened without cookies, never a private one. The site sees the visit."));
         }
         AddSharedClipboard();
     }
+
+    /// The way in to a room of settings.
+    private void Door(string name, string icon) =>
+        options.Children.Add(Row(Ui.Icon(icon, 12), name, trailingText: "\u203a", action: () => Enter(name)));
+
+    /// What a setting does, in the room's own space — which is the point of
+    /// having rooms: this used to have to fit in a tooltip.
+    private static FrameworkElement Note(string text) =>
+        Ui.Text(text, 10.5, null, "Secondary").With(t =>
+        {
+            t.TextWrapping = TextWrapping.Wrap;
+            t.Margin = new Thickness(8, 0, 8, 6);
+        });
 
     /// The clipboard shared with one other device, and the few steps that
     /// introduce the two: ask on both, pick the device, check the code.
