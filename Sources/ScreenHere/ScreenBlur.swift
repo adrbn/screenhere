@@ -3,6 +3,7 @@ import AppKit
 enum BlurPrefs {
     static let enabledKey = "BlurEnabled"
     static let othersKey = "BlurOtherScreensEnabled"
+    static let holdsKey = "BlurHoldsDisplayEnabled"
 }
 
 /// Frosts the screen, so what is on it cannot be read from across the desk.
@@ -20,6 +21,9 @@ final class ScreenBlur: ObservableObject {
     @Published private(set) var isCurtain = false
     /// Frost the displays the pointer is away from, on its own.
     @Published private(set) var blursOthers = false
+    /// Hold the displays the curtain covers, so macOS cannot slide to another
+    /// desktop while they are frosted.
+    @Published private(set) var holdsDisplay = false
     /// ⇧⌘9 is registered by another app.
     @Published private(set) var shortcutUnavailable = false
 
@@ -37,6 +41,8 @@ final class ScreenBlur: ObservableObject {
     /// When the pointer was last on each display.
     private var lastSeen: [CGDirectDisplayID: Date] = [:]
     private var covered: Set<CGDirectDisplayID> = []
+    /// Bumped on every change, so a picture that arrives late is dropped.
+    private var generation = 0
     /// Displays taken over for the curtain, to give back when it lifts.
     private var seized: Set<CGDirectDisplayID> = []
     private var timer: Timer?
@@ -60,6 +66,7 @@ final class ScreenBlur: ObservableObject {
     func activate() {
         isEnabled = UserDefaults.standard.bool(forKey: BlurPrefs.enabledKey)
         blursOthers = UserDefaults.standard.bool(forKey: BlurPrefs.othersKey)
+        holdsDisplay = UserDefaults.standard.bool(forKey: BlurPrefs.holdsKey)
         update()
     }
 
@@ -75,6 +82,15 @@ final class ScreenBlur: ObservableObject {
     func setBlursOthers(_ on: Bool) {
         UserDefaults.standard.set(on, forKey: BlurPrefs.othersKey)
         blursOthers = on
+        update()
+    }
+
+    func setHoldsDisplay(_ on: Bool) {
+        UserDefaults.standard.set(on, forKey: BlurPrefs.holdsKey)
+        holdsDisplay = on
+        // Whether a cover holds its display is settled when it is made, so
+        // any already on screen are taken down and made again.
+        apply([])
         update()
     }
 
@@ -178,7 +194,9 @@ final class ScreenBlur: ObservableObject {
     private func apply(_ wanted: Set<CGDirectDisplayID>) {
         guard wanted != covered else { return }
         covered = wanted
-        let curtain = isCurtain
+        generation += 1
+        let generation = self.generation
+        let holding = isCurtain && holdsDisplay
         // Given back while the frost still hides the screen: leaving capture
         // blanks the display for an instant, and that instant belongs behind
         // the frost rather than in front of it.
@@ -189,47 +207,60 @@ final class ScreenBlur: ObservableObject {
         }
         for id in wanted where windows[id] == nil {
             guard let screen = Self.screen(for: id) else { continue }
-            let window = Self.overlay(over: screen)
-            windows[id] = window
             guard #available(macOS 14.0, *) else {
-                show(window, over: id, seizing: false)
+                frost(nil, over: screen, id: id)
                 continue
             }
-            // The picture is taken before anything is on screen, and the
-            // window stays empty — and invisible — until it is there.
+            // Nothing is put on screen until there is a picture to put there.
             Task { [weak self] in
-                let shade = await ScreenShade.blurred(display: id)
-                guard let self, self.windows[id] === window else { return }
-                if let shade { window.contentView = Self.picture(shade, over: screen) }
-                self.show(window, over: id, seizing: curtain && shade != nil)
+                let shot = await ScreenShade.shot(display: id)
+                guard let self, self.generation == generation,
+                      self.covered.contains(id), self.windows[id] == nil else { return }
+                if holding, let shot { self.lower(shot, over: screen, id: id) }
+                else { self.frost(shot?.frosted, over: screen, id: id) }
             }
         }
     }
 
-    /// Sliding between desktops is animated by the window server, which draws
-    /// none of our windows while it does — whatever their level, as measuring
-    /// it showed — so the frost blinks off at the one moment it must not.
-    /// Holding the display stops the slide happening at all, which is what a
-    /// curtain is for: nothing moves, nothing shows.
+    /// The curtain, which holds the display so the desktop cannot slide.
     ///
-    /// Only the curtain holds it, and only with a picture to hold it with: a
-    /// held display composes nothing but this window, so an empty one would
-    /// leave a black screen. The automatic frost never holds anything — it is
-    /// on all day, and a Mac whose desktops are stuck all day is worse than a
-    /// frost that blinks.
-    private func show(_ window: NSWindow, over id: CGDirectDisplayID, seizing: Bool) {
+    /// The display is taken **before** the window is made: a window that
+    /// already existed is not composed on a held display — it goes black,
+    /// which is what measuring it showed. So the order is take, then make.
+    ///
+    /// Taking it blanks the screen, so the sharp picture goes up in that same
+    /// breath and the screen looks untouched; the frost then fades in over
+    /// it. Nothing flashes.
+    @available(macOS 14.0, *)
+    private func lower(_ shot: (sharp: NSImage, frosted: NSImage),
+                       over screen: NSScreen, id: CGDirectDisplayID) {
+        let held = CGDisplayCaptureWithOptions(id, .noFill) == .success
+        if held { seized.insert(id) }
+        let window = Self.overlay(over: screen)
+        // A held display composes nothing but windows of ours at this level.
+        window.level = held ? NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
+                            : .screenSaver
+        let view = Self.picture(shot.sharp, over: screen)
+        window.contentView = view
+        window.alphaValue = 1
+        windows[id] = window
         window.orderFrontRegardless()
-        fade(window, to: 1, over: Self.fadeIn) { [weak self] in
-            // Once the frost is all the way up: entering capture blanks the
-            // display for an instant, which belongs behind it.
-            guard seizing, let self, self.windows[id] === window else { return }
-            window.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
-            if CGDisplayCaptureWithOptions(id, .noFill) == .success {
-                self.seized.insert(id)
-            } else {
-                window.level = .screenSaver
-            }
-        }
+
+        let transition = CATransition()
+        transition.type = .fade
+        transition.duration = Self.fadeIn
+        view.layer?.add(transition, forKey: "contents")
+        view.image = shot.frosted
+    }
+
+    /// The automatic frost, which holds nothing: it is on all day, and a Mac
+    /// whose desktops are stuck all day is worse than one that is not.
+    private func frost(_ picture: NSImage?, over screen: NSScreen, id: CGDirectDisplayID) {
+        let window = Self.overlay(over: screen)
+        if let picture { window.contentView = Self.picture(picture, over: screen) }
+        windows[id] = window
+        window.orderFrontRegardless()
+        fade(window, to: 1, over: Self.fadeIn)
     }
 
     /// Gives back every display the curtain held.
@@ -286,8 +317,9 @@ final class ScreenBlur: ObservableObject {
 
     /// The blurred picture, filling the display whatever its own size — it is
     /// taken at a quarter of it.
-    private static func picture(_ image: NSImage, over screen: NSScreen) -> NSView {
+    private static func picture(_ image: NSImage, over screen: NSScreen) -> NSImageView {
         let view = NSImageView(frame: NSRect(origin: .zero, size: screen.frame.size))
+        view.wantsLayer = true
         view.image = image
         view.imageScaling = .scaleAxesIndependently
         view.autoresizingMask = [.width, .height]

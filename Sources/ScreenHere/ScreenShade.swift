@@ -27,7 +27,10 @@ enum ScreenShade {
         _ = await shareable()
     }
 
-    static func blurred(display id: CGDirectDisplayID) async -> NSImage? {
+    /// Both pictures of the display: as it is, and frosted. The sharp one
+    /// goes up first when the curtain takes the display — the screen does not
+    /// appear to change — and frosts over from there.
+    static func shot(display id: CGDirectDisplayID) async -> (sharp: NSImage, frosted: NSImage)? {
         guard let display = await find(id) else { return nil }
         let width = Int(CGFloat(display.width) * scale)
         let height = Int(CGFloat(display.height) * scale)
@@ -43,9 +46,11 @@ enum ScreenShade {
                                      excludingApplications: [ourselves].compactMap { $0 },
                                      exceptingWindows: [])
         guard let shot = try? await SCScreenshotManager.captureImage(contentFilter: filter,
-                                                                     configuration: configuration)
+                                                                     configuration: configuration),
+              let frosted = blur(shot)
         else { return nil }
-        return blur(shot)
+        let size = NSSize(width: shot.width, height: shot.height)
+        return (NSImage(cgImage: shot, size: size), frosted)
     }
 
     /// A gaussian, held in to the edges: without the clamp the blur fades

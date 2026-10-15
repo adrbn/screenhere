@@ -36,6 +36,13 @@ struct PanelOptions: View {
                               + "A screen clears the moment your pointer arrives, and frosts again "
                               + "a second after it leaves.")
                 }
+                PanelRow(icon: "hand.raised", title: "Freeze the desktop", beta: true) {
+                    toggle(isOn: blur.holdsDisplay, set: blur.setHoldsDisplay)
+                        .help("While ⇧⌘9 is down, hold every frosted display so macOS cannot "
+                              + "slide to another desktop — the frost can no longer blink off "
+                              + "mid-swipe. Taking a display over flashes it for an instant as "
+                              + "the curtain comes down.")
+                }
             }
             PanelRow(icon: "power", title: "Launch at login") {
                 toggle(isOn: model.launchesAtLogin, set: model.setLaunchAtLogin)
