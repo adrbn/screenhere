@@ -94,7 +94,8 @@ internal static class Shots
     private static void Pose()
     {
         var settings = Settings.Current;
-        settings.ScreenEnabled = settings.WindowEnabled = settings.TextEnabled = true;
+        settings.ScreenEnabled = settings.WindowEnabled = settings.TextEnabled = settings.BlurEnabled = true;
+        settings.BlurOtherScreens = true;
         settings.PreviewOnCapturedScreen = false;
         settings.CapturesToClipboard = false;
 
