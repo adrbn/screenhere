@@ -153,17 +153,23 @@ internal static class Native
     [DllImport("user32.dll")]
     private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
 
-    /// The build acrylic arrived in: Windows 10 1803. Before it the call is
+    /// The build the blur arrived in: Windows 10 1803. Before it the call is
     /// accepted and does nothing, which would leave a see-through window.
-    private const int AcrylicBuild = 17134;
+    private const int BlurBuild = 17134;
+
+    /// Blur behind the window (3), not acrylic (4): acrylic with a tint of no
+    /// alpha paints the window black rather than blurring it, and recent
+    /// Windows 11 builds stopped honouring it through this call at all. The
+    /// blur is plainer and it works everywhere.
+    private const int BlurBehind = 3;
 
     /// Asks the desktop manager to blur whatever is behind the window and
     /// tint it with `tint` (0xAABBGGRR, the order this API wants). False when
     /// Windows cannot do it, and the caller shades the window itself instead.
-    public static bool SetAcrylic(IntPtr hwnd, uint tint)
+    public static bool SetBlurBehind(IntPtr hwnd, uint tint)
     {
-        if (Environment.OSVersion.Version.Build < AcrylicBuild) return false;
-        var policy = new AccentPolicy { AccentState = 4, AccentFlags = 2, GradientColor = unchecked((int)tint) };
+        if (Environment.OSVersion.Version.Build < BlurBuild) return false;
+        var policy = new AccentPolicy { AccentState = BlurBehind, AccentFlags = 2, GradientColor = unchecked((int)tint) };
         var size = Marshal.SizeOf<AccentPolicy>();
         var memory = Marshal.AllocHGlobal(size);
         try

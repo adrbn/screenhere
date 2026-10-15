@@ -166,7 +166,7 @@ internal static class ScreenBlur
         };
         var handle = new WindowInteropHelper(window).EnsureHandle();
         Native.AddExStyle(handle, Native.WS_EX_TRANSPARENT | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE);
-        var blurred = Native.SetAcrylic(handle, 0);
+        var blurred = Native.SetBlurBehind(handle, 0);
         window.Content = new Border { Background = new SolidColorBrush(blurred ? Shade : Flat), Opacity = 0 };
         Native.SetWindowPos(handle, IntPtr.Zero, (int)display.Bounds.X, (int)display.Bounds.Y,
                             (int)display.Bounds.Width, (int)display.Bounds.Height,

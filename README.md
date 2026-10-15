@@ -94,7 +94,7 @@ Switch on **Blur the screens you're not on** underneath and the other displays f
 
 **Freeze the desktop**, a beta underneath, stops macOS sliding to another desktop while the frost is down — without it a three-finger swipe shows the screen for the length of the animation, because the window server draws nothing of ours while it slides. It costs a short flash as the frost comes down, which is why it is a beta and is off until you turn it on.
 
-The frost is a real blur of your screen: ScreenHere takes one small picture of each display as the frost comes down, blurs it, and shows that. The picture lives in memory for as long as the frost does and is never written anywhere — not to the history, not to disk. It uses the Screen Recording permission the app already has; without it, or before macOS 14, you get the window server's frosted sheet instead. On Windows it is the desktop manager's acrylic, with a flat shade on versions too old for it. Off until you turn it on.
+The frost is a real blur of your screen: ScreenHere takes one small picture of each display as the frost comes down, blurs it, and shows that. The picture lives in memory for as long as the frost does and is never written anywhere — not to the history, not to disk. It uses the Screen Recording permission the app already has; without it, or before macOS 14, you get the window server's frosted sheet instead. On Windows it is the desktop manager's blur behind the window, with a flat shade on versions too old for it. Off until you turn it on.
 
 ## On Windows
 
