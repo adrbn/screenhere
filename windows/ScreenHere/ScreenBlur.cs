@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Drawing = System.Drawing;
@@ -29,15 +30,16 @@ internal static class ScreenBlur
     private const double Tick = 0.2;
     private static readonly Duration FadeIn = TimeSpan.FromSeconds(0.35);
     private static readonly Duration FadeOut = TimeSpan.FromSeconds(0.18);
-    /// The shade over the blur, dark enough that a window behind it is a
-    /// shape, not a sentence.
-    private static readonly Color Shade = Color.FromArgb(0x99, 0x14, 0x14, 0x18);
     /// When the screen cannot be pictured at all — a locked session, a driver
     /// that refuses — the cover is a flat veil instead, which hides as much.
     private static readonly Color Flat = Color.FromArgb(0xF2, 0x10, 0x10, 0x14);
-    /// The blur is pixels thrown away and put back smoothly: an eighth of the
-    /// width, drawn over the whole of it.
-    private const int Grain = 8;
+    /// The blur is pixels thrown away and put back smoothly: a quarter of the
+    /// width, drawn over the whole of it — the same quarter the Mac keeps.
+    private const int Grain = 4;
+    /// A gaussian over the top of that, which is what turns a coarse picture
+    /// into ground glass. Throwing pixels away alone looks like throwing
+    /// pixels away.
+    private const double Radius = 24;
 
     private static readonly Dictionary<string, Window> Covers = new();
     /// When the pointer was last on each display, by device name.
@@ -189,10 +191,26 @@ internal static class ScreenBlur
             // over it.
             layers.Children.Add(new Image { Source = pictures.Sharp, Stretch = Stretch.Fill });
             var frost = new Grid { Opacity = 0 };
-            var blurred = new Image { Source = pictures.Frosted, Stretch = Stretch.Fill };
+            var blurred = new Image
+            {
+                Source = pictures.Frosted,
+                Stretch = Stretch.Fill,
+                // Drawn past every edge of the display: a gaussian fades into
+                // nothing at the border of what it is given, and that fade
+                // belongs off screen rather than as a dark frame.
+                Margin = new Thickness(-Radius * 2),
+                // No shade over it: the Mac frosts with the blur alone, and a
+                // veil dark enough to hide on its own is what made this look
+                // like a dimmed screen rather than ground glass.
+                Effect = new BlurEffect
+                {
+                    Radius = Radius,
+                    KernelType = KernelType.Gaussian,
+                    RenderingBias = RenderingBias.Quality,
+                },
+            };
             RenderOptions.SetBitmapScalingMode(blurred, BitmapScalingMode.HighQuality);
             frost.Children.Add(blurred);
-            frost.Children.Add(new Border { Background = new SolidColorBrush(Shade) });
             layers.Children.Add(frost);
             window.Tag = frost;
         }
