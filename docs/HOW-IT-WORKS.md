@@ -109,6 +109,8 @@ The order is the whole trick, and it took measuring to find: **the display is ta
 
 On Windows there is no equivalent: a cover belongs to the virtual desktop it was made on, so switching desktop leaves the next one uncovered altogether.
 
+Windows frosts the same way and for the same reason. It used to ask the desktop manager to blur behind the cover, and recent builds ignore that call: a cover that asks and does not get it is simply an opaque window, so every screen went black instead of frosting. It now takes its own picture of the display, throws away seven pixels in eight and draws what is left over the whole of it.
+
 A still picture rather than the window server's own behind-window blur, which is what this used to be: that one is a tinted sheet laid over the screen rather than a blur of what is on it, and it drops out while macOS slides between desktops — the one moment a frost must not lift. It is still what you get before macOS 14, or if Screen Recording has not been granted.
 
 ## Link previews (beta)

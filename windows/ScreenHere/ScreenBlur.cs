@@ -3,15 +3,22 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Drawing = System.Drawing;
 
 namespace ScreenHere;
 
 /// Frosts the screen, so what is on it cannot be read from across the desk.
 /// Win+Shift+9 pulls the frost over every display at once, and an option
-/// frosts the displays the pointer is not on by itself. The frost is the
-/// desktop manager's own blur of what is behind a window: nothing is
-/// captured, nothing is recorded, and what is behind it stays live.
+/// frosts the displays the pointer is not on by itself. The frost is a
+/// blurred picture of the display, taken as the cover comes down, kept in
+/// memory and thrown away with it — the same as the Mac does.
+///
+/// Not the desktop manager's blur behind the window, which is what this used
+/// to be: recent Windows builds ignore that call, and a cover that asked for
+/// it and did not get it is an opaque window — every screen went black
+/// instead of frosting.
 internal static class ScreenBlur
 {
     /// A screen stays clear for a moment after the pointer leaves it:
@@ -25,9 +32,12 @@ internal static class ScreenBlur
     /// The shade over the blur, dark enough that a window behind it is a
     /// shape, not a sentence.
     private static readonly Color Shade = Color.FromArgb(0x99, 0x14, 0x14, 0x18);
-    /// Windows too old to blur behind a window gets this instead, which hides
-    /// as much and is the point of the feature.
+    /// When the screen cannot be pictured at all — a locked session, a driver
+    /// that refuses — the cover is a flat veil instead, which hides as much.
     private static readonly Color Flat = Color.FromArgb(0xF2, 0x10, 0x10, 0x14);
+    /// The blur is pixels thrown away and put back smoothly: an eighth of the
+    /// width, drawn over the whole of it.
+    private const int Grain = 8;
 
     private static readonly Dictionary<string, Window> Covers = new();
     /// When the pointer was last on each display, by device name.
@@ -135,11 +145,12 @@ internal static class ScreenBlur
         }
     }
 
-    /// The shade fades; the blur behind it is the desktop manager's and has
-    /// no in-between, so it arrives with the shade and leaves after it.
+    /// The frost fades, the sharp picture underneath does not: fading the
+    /// whole cover would fade it to the opaque window behind it, which is
+    /// black. What fades is kept on the window's own Tag.
     private static void Fade(Window window, double to, Duration over, Action? then = null)
     {
-        if (window.Content is not UIElement shade) return;
+        if (window.Tag is not UIElement shade) return;
         var fade = new DoubleAnimation(to, over) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } };
         if (then != null) fade.Completed += (_, _) => then();
         shade.BeginAnimation(UIElement.OpacityProperty, fade);
@@ -148,8 +159,13 @@ internal static class ScreenBlur
     /// A window over the whole display, above everything, that no click can
     /// reach. Placed before it is shown: a cover must never be seen arriving
     /// somewhere else first.
+    ///
+    /// The picture is taken first, because the window is opaque when there is
+    /// one to show and see-through when there is not, and that cannot be
+    /// changed once the window has a handle.
     private static Window Cover(DisplayInfo display)
     {
+        var shot = Shot(display.Bounds);
         var window = new Window
         {
             WindowStyle = WindowStyle.None,
@@ -159,20 +175,80 @@ internal static class ScreenBlur
             Topmost = true,
             IsHitTestVisible = false,
             WindowStartupLocation = WindowStartupLocation.Manual,
-            // The blur is the desktop manager's, behind the window: anything
-            // painted here would hide it. The shade is a child, so it can
-            // fade without taking the blur's own transparency with it.
-            Background = Brushes.Transparent,
+            AllowsTransparency = shot == null,
+            Background = shot == null ? Brushes.Transparent : Brushes.Black,
         };
         var handle = new WindowInteropHelper(window).EnsureHandle();
         Native.AddExStyle(handle, Native.WS_EX_TRANSPARENT | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE);
-        var blurred = Native.SetBlurBehind(handle, 0);
-        window.Content = new Border { Background = new SolidColorBrush(blurred ? Shade : Flat), Opacity = 0 };
+
+        var layers = new Grid();
+        if (shot is { } pictures)
+        {
+            // The sharp picture goes up at once, so the cover appearing cannot
+            // be seen: it is what the screen already shows. The frost fades in
+            // over it.
+            layers.Children.Add(new Image { Source = pictures.Sharp, Stretch = Stretch.Fill });
+            var frost = new Grid { Opacity = 0 };
+            var blurred = new Image { Source = pictures.Frosted, Stretch = Stretch.Fill };
+            RenderOptions.SetBitmapScalingMode(blurred, BitmapScalingMode.HighQuality);
+            frost.Children.Add(blurred);
+            frost.Children.Add(new Border { Background = new SolidColorBrush(Shade) });
+            layers.Children.Add(frost);
+            window.Tag = frost;
+        }
+        else
+        {
+            var flat = new Border { Background = new SolidColorBrush(Flat), Opacity = 0 };
+            layers.Children.Add(flat);
+            window.Tag = flat;
+        }
+        window.Content = layers;
+
         Native.SetWindowPos(handle, IntPtr.Zero, (int)display.Bounds.X, (int)display.Bounds.Y,
                             (int)display.Bounds.Width, (int)display.Bounds.Height,
                             Native.SWP_NOACTIVATE | Native.SWP_NOZORDER);
         window.Show();
         Fade(window, 1, FadeIn);
         return window;
+    }
+
+    /// The display as it is, and the same thing with the detail thrown away.
+    /// Null when the screen cannot be read at all.
+    private static (ImageSource Sharp, ImageSource Frosted)? Shot(Rect bounds)
+    {
+        try
+        {
+            using var whole = Capture.Grab(bounds);
+            using var small = new Drawing.Bitmap(Math.Max(1, whole.Width / Grain),
+                                                 Math.Max(1, whole.Height / Grain));
+            using (var graphics = Drawing.Graphics.FromImage(small))
+            {
+                graphics.InterpolationMode = Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
+                graphics.DrawImage(whole, 0, 0, small.Width, small.Height);
+            }
+            return (Source(whole), Source(small));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// A GDI bitmap as something the interface can draw. The copy is frozen,
+    /// so the handle it came from can go straight back.
+    private static ImageSource Source(Drawing.Bitmap bitmap)
+    {
+        var handle = bitmap.GetHbitmap();
+        try
+        {
+            var source = Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty,
+                                                               BitmapSizeOptions.FromEmptyOptions());
+            source.Freeze();
+            return source;
+        }
+        finally
+        {
+            Native.DeleteObject(handle);
+        }
     }
 }

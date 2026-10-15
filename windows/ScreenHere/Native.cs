@@ -136,58 +136,6 @@ internal static class Native
 
     // MARK: - Frosted overlay
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct AccentPolicy
-    {
-        public int AccentState, AccentFlags, GradientColor, AnimationId;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct WindowCompositionAttributeData
-    {
-        public int Attribute;
-        public IntPtr Data;
-        public int SizeOfData;
-    }
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
-
-    /// The build the blur arrived in: Windows 10 1803. Before it the call is
-    /// accepted and does nothing, which would leave a see-through window.
-    private const int BlurBuild = 17134;
-
-    /// Blur behind the window (3), not acrylic (4): acrylic with a tint of no
-    /// alpha paints the window black rather than blurring it, and recent
-    /// Windows 11 builds stopped honouring it through this call at all. The
-    /// blur is plainer and it works everywhere.
-    private const int BlurBehind = 3;
-
-    /// Asks the desktop manager to blur whatever is behind the window and
-    /// tint it with `tint` (0xAABBGGRR, the order this API wants). False when
-    /// Windows cannot do it, and the caller shades the window itself instead.
-    public static bool SetBlurBehind(IntPtr hwnd, uint tint)
-    {
-        if (Environment.OSVersion.Version.Build < BlurBuild) return false;
-        var policy = new AccentPolicy { AccentState = BlurBehind, AccentFlags = 2, GradientColor = unchecked((int)tint) };
-        var size = Marshal.SizeOf<AccentPolicy>();
-        var memory = Marshal.AllocHGlobal(size);
-        try
-        {
-            Marshal.StructureToPtr(policy, memory, false);
-            var data = new WindowCompositionAttributeData { Attribute = 19, Data = memory, SizeOfData = size };
-            return SetWindowCompositionAttribute(hwnd, ref data) != 0;
-        }
-        catch (EntryPointNotFoundException)
-        {
-            return false;
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(memory);
-        }
-    }
-
     // MARK: - Keyboard
 
     public const int WH_KEYBOARD_LL = 13;
