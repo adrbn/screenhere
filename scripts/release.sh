@@ -22,6 +22,7 @@ set -euo pipefail
 VERSION="${1:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 PLIST="Resources/Info.plist"
+CSPROJ="windows/ScreenHere/ScreenHere.csproj"
 RELEASE_NOTES="${RELEASE_NOTES:-}"
 DMG="build/ScreenHere.dmg"
 ZIP="build/ScreenHere.zip"
@@ -88,9 +89,14 @@ read -r -p "Continue? [y/N] " reply || true
 echo "==> Running tests..."
 swift test
 
-echo "==> Bumping $PLIST to $VERSION..."
+echo "==> Bumping $PLIST and $CSPROJ to $VERSION..."
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$PLIST"
+# The Windows build is handed the tag by its workflow, but a build of main
+# carries whatever the project file says: left behind, it tells the people
+# running it they are on a version they are not, and offers them an update
+# back to it.
+/usr/bin/sed -i '' "s|<Version>[0-9.]*</Version>|<Version>$VERSION</Version>|" "$CSPROJ"
 
 echo "==> Building and signing..."
 NOTARY_PROFILE="$NOTARY_PROFILE" ./scripts/build-dmg.sh
@@ -98,7 +104,7 @@ NOTARY_PROFILE="$NOTARY_PROFILE" ./scripts/build-dmg.sh
 # ---------------------------------------------------------------- publish
 
 echo "==> Committing, tagging and pushing..."
-git add "$PLIST"
+git add "$PLIST" "$CSPROJ"
 if git diff --cached --quiet; then
     echo "    $PLIST already at $VERSION — nothing to commit."
 else
