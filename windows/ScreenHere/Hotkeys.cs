@@ -14,7 +14,7 @@ internal enum Modifiers
 }
 
 /// What a shortcut can be for.
-internal enum Feature { Screen, Window, Text, History }
+internal enum Feature { Screen, Window, Text, History, Blur }
 
 /// A key and its modifiers, as the user records it.
 internal readonly record struct KeyShortcut(int Key, Modifiers Modifiers)
@@ -25,6 +25,7 @@ internal readonly record struct KeyShortcut(int Key, Modifiers Modifiers)
         Feature.Screen => '3',
         Feature.Window => '2',
         Feature.Text => '7',
+        Feature.Blur => '9',
         _ => '8',
     }, Modifiers.Win | Modifiers.Shift);
 

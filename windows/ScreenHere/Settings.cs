@@ -18,7 +18,9 @@ internal sealed class Settings
     public bool HistoryEnabled { get; set; }
     public bool LinkPreviews { get; set; }
     public bool PreviewOnCapturedScreen { get; set; } = true;
-    /// Frost the displays the pointer is not on. Off until turned on.
+    /// Frosting the screen, and with it Win+Shift+9. Off until turned on.
+    public bool BlurEnabled { get; set; }
+    /// On top of the shortcut, frost the displays the pointer is not on.
     public bool BlurOtherScreens { get; set; }
     /// Where Win+Shift+3 sends a capture: the Screenshots folder, or the clipboard.
     public bool CapturesToClipboard { get; set; }

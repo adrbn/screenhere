@@ -481,6 +481,7 @@ struct ReadmeShots {
                                         thumbnails: ["shot": drawing(240, 150, 0.72), "photo": drawing(180, 240, 0.08)])
 
         WindowShortcuts.shared.pose(enabled: true)
+        ScreenBlur.shared.pose(enabled: true, blursOthers: true)
 
         let panelView = PanelView(model: model, onRestoreShortcuts: {}, onHideIcon: {},
                                   onCheckUpdates: {}, onOpenGitHub: {}, onQuit: {})

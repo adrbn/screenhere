@@ -97,6 +97,7 @@ internal static class Glyph
     public const string Warning = "";
     public const string Close = "";
     public const string Lock = "";
+    public const string Hide = "";
     public const string Globe = "";
     public const string Document = "";
     public const string Picture = "";

@@ -18,6 +18,7 @@ public class KeyShortcutTests
         Assert.Equal("Win+Shift+2", KeyShortcut.Default(Feature.Window).Label);
         Assert.Equal("Win+Shift+7", KeyShortcut.Default(Feature.Text).Label);
         Assert.Equal("Win+Shift+8", KeyShortcut.Default(Feature.History).Label);
+        Assert.Equal("Win+Shift+9", KeyShortcut.Default(Feature.Blur).Label);
         Assert.All(Defaults, d => Assert.Null(d.Item2.Problem(d.Item1, Defaults)));
     }
 

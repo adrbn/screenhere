@@ -27,6 +27,7 @@ No administrator rights, no account, nothing outside your user profile. ScreenHe
 | **Screen** | <kbd>Win</kbd><kbd>Shift</kbd><kbd>3</kbd> | Captures only the display the pointer is on, into your Screenshots folder. Add <kbd>Ctrl</kbd> to send it to the clipboard instead. |
 | **Window** (beta) | <kbd>Win</kbd><kbd>Shift</kbd><kbd>2</kbd> | Captures only the window under the pointer — whole, even when another window covers part of it. Off until you turn it on. |
 | **Text** | <kbd>Win</kbd><kbd>Shift</kbd><kbd>7</kbd> | Drag over anything on screen and its text is on your clipboard. Read on your PC by Windows' own recogniser: nothing is uploaded, no network needed. |
+| **Blur** | <kbd>Win</kbd><kbd>Shift</kbd><kbd>9</kbd> | Frosts every display, so nobody standing beside you can read the screen; the same keys again clear it. An option under it frosts the displays the pointer is away from by itself. Off until you turn it on. |
 | **History** | <kbd>Win</kbd><kbd>Shift</kbd><kbd>8</kbd> | The last 200 things you copied — text, images, files — in a list under your pointer. Type to filter, <kbd>Enter</kbd>, paste. Pictures are read on your PC, so a screenshot is listed by the words it shows and found by typing them. Off until you turn it on. |
 
 <picture>
@@ -34,7 +35,7 @@ No administrator rights, no account, nothing outside your user profile. ScreenHe
   <img src="../docs/assets/windows-history-light.png" width="596" alt="The clipboard history on Windows: a searchable list of recently copied texts, files and images" />
 </picture>
 
-The panel is the same as the Mac's: the map of your displays with the one under the pointer filled in, a tile that switches each feature on and off, and the options of whatever is on — **Preview on captured screen**, **Blur the screens you're not on**, **Launch at login**, **Shared clipboard** (beta), **Link previews** (beta).
+The panel is the same as the Mac's: the map of your displays with the one under the pointer filled in, a tile that switches each feature on and off, and the options of whatever is on — **Preview on captured screen**, **Launch at login**, **Shared clipboard** (beta), **Link previews** (beta).
 
 **Shared clipboard** gives this PC and a Mac — or another PC — one clipboard, on the same network and nowhere else: [how to connect them, and what it does](../docs/SHARED-CLIPBOARD.md).
 
@@ -63,7 +64,7 @@ One limit: Windows does not show an app the keys typed into a window running as 
 
 **Link previews** follow the same rules as on the Mac: a link is visited when the list shows it, never when you copy it, without cookies, over https only, the top megabyte at most, never on a metered connection, and never when it looks private or single-use. The name is looked up by ScreenHere itself and the visit goes to the address that was checked.
 
-**Blurring the other screens.** **Blur the screens you're not on** puts a window over every display the pointer has been away from for a second and a half, and takes it off the moment the pointer comes back. The window is click-through (`WS_EX_TRANSPARENT`), never takes focus, and is filled by the desktop manager's own acrylic blur of what is behind it: nothing is captured and nothing is recorded, so what is behind stays live. Windows older than 10 version 1803 cannot blur behind a window and get a flat dark shade instead, which hides as much. The pointer is read five times a second, and the windows only change when the answer does.
+**Frosting the screen.** <kbd>Win</kbd><kbd>Shift</kbd><kbd>9</kbd> puts a window over every display, and the same keys take them off again; **Blur the screens you're not on**, under the tile, does the same for each display the pointer has been away from for a second and a half. The window is click-through (`WS_EX_TRANSPARENT`), never takes focus, and is filled by the desktop manager's own acrylic blur of what is behind it: nothing is captured and nothing is recorded, so what is behind stays live. The shade over the blur fades in and out; the blur itself is the desktop manager's and has no in-between, so it arrives with the shade and leaves after it. Windows older than 10 version 1803 cannot blur behind a window and get a flat dark shade instead, which fades on its own and hides as much.
 
 **From a script.** A second launch can press a shortcut for the one that is running: `ScreenHere.exe --do screen`, `window`, `text` or `history`.
 

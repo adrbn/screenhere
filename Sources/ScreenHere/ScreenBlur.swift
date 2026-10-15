@@ -1,18 +1,27 @@
 import AppKit
 
 enum BlurPrefs {
-    static let enabledKey = "BlurOtherScreensEnabled"
+    static let enabledKey = "BlurEnabled"
+    static let othersKey = "BlurOtherScreensEnabled"
 }
 
-/// Frosts every display the pointer is not on, so what sits on the screens
-/// beside you cannot be read from across the desk. The frost is the window
-/// server's own blur of what is behind a window: nothing is captured, nothing
-/// is recorded, and what is behind it stays live and in place.
+/// Frosts the screen, so what is on it cannot be read from across the desk.
+/// ⇧⌘9 pulls the frost over every display at once, and an option frosts the
+/// displays the pointer is not on by itself. The frost is the window server's
+/// own blur of what is behind a window: nothing is captured, nothing is
+/// recorded, and what is behind it stays live and in place.
 @MainActor
 final class ScreenBlur: ObservableObject {
     static let shared = ScreenBlur()
 
+    /// The feature, and with it ⇧⌘9.
     @Published private(set) var isEnabled = false
+    /// The frost is down over everything, until ⇧⌘9 again.
+    @Published private(set) var isCurtain = false
+    /// Frost the displays the pointer is away from, on its own.
+    @Published private(set) var blursOthers = false
+    /// ⇧⌘9 is registered by another app.
+    @Published private(set) var shortcutUnavailable = false
 
     /// A screen stays clear for a moment after the pointer leaves it: glancing
     /// at the other screen must not frost it in your face.
@@ -23,6 +32,7 @@ final class ScreenBlur: ObservableObject {
     private static let fadeIn: TimeInterval = 0.35
     private static let fadeOut: TimeInterval = 0.18
 
+    private let registrar = HotkeyRegistrar(signature: HotkeyRegistrar.blurSignature)
     private var windows: [CGDirectDisplayID: NSWindow] = [:]
     /// When the pointer was last on each display.
     private var lastSeen: [CGDirectDisplayID: Date] = [:]
@@ -47,18 +57,44 @@ final class ScreenBlur: ObservableObject {
 
     func activate() {
         isEnabled = UserDefaults.standard.bool(forKey: BlurPrefs.enabledKey)
+        blursOthers = UserDefaults.standard.bool(forKey: BlurPrefs.othersKey)
         update()
     }
 
     func setEnabled(_ on: Bool) {
         UserDefaults.standard.set(on, forKey: BlurPrefs.enabledKey)
         isEnabled = on
+        // Switching the feature off lifts the frost with it; nothing should
+        // be left over a screen by a shortcut that no longer answers.
+        if !on { isCurtain = false }
         update()
     }
 
-    /// Takes the frost off every screen — at quit, so no overlay outlives the
-    /// app that owns it.
+    func setBlursOthers(_ on: Bool) {
+        UserDefaults.standard.set(on, forKey: BlurPrefs.othersKey)
+        blursOthers = on
+        update()
+    }
+
+    /// ⇧⌘9: the frost over every display, and off again.
+    func toggleCurtain() {
+        guard isEnabled else { return }
+        isCurtain.toggle()
+        update()
+    }
+
+    /// Documentation shots only: show a state without registering, saving
+    /// or frosting anything.
+    func pose(enabled: Bool, blursOthers: Bool) {
+        isEnabled = enabled
+        self.blursOthers = blursOthers
+    }
+
+    /// Takes the frost off every screen and gives ⇧⌘9 back — at quit, so no
+    /// overlay outlives the app that owns it.
     func stop() {
+        registrar.unbindAll()
+        isCurtain = false
         timer?.invalidate()
         timer = nil
         for window in windows.values { window.orderOut(nil) }
@@ -66,20 +102,31 @@ final class ScreenBlur: ObservableObject {
         covered.removeAll()
     }
 
+    /// Brings the shortcut, the pointer timer and the overlays in line with
+    /// what is switched on.
     private func update() {
-        guard isEnabled else {
-            stop()
+        registrar.unbindAll()
+        shortcutUnavailable = isEnabled && !registrar.bind([.blurCurtain]) { _ in
+            MainActor.assumeIsolated { ScreenBlur.shared.toggleCurtain() }
+        }
+
+        if isEnabled && blursOthers {
+            if timer == nil {
+                // A plain scheduled timer stops while a menu is open or a
+                // window is being dragged, which is exactly when the pointer
+                // changes screens.
+                let timer = Timer(timeInterval: Self.tick, repeats: true) { _ in
+                    MainActor.assumeIsolated { self.sample() }
+                }
+                RunLoop.main.add(timer, forMode: .common)
+                self.timer = timer
+            }
+        } else {
+            timer?.invalidate()
+            timer = nil
             lastSeen.removeAll()
-            return
         }
-        guard timer == nil else { return }
-        // A plain scheduled timer stops while a menu is open or a window is
-        // being dragged, which is exactly when the pointer changes screens.
-        let timer = Timer(timeInterval: Self.tick, repeats: true) { _ in
-            MainActor.assumeIsolated { self.sample() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+
         if screenObserver == nil {
             screenObserver = NotificationCenter.default.addObserver(
                 forName: NSApplication.didChangeScreenParametersNotification,
@@ -88,9 +135,10 @@ final class ScreenBlur: ObservableObject {
                 // A display that moved or changed size keeps its identifier,
                 // so the overlays are built again rather than resized.
                 MainActor.assumeIsolated {
-                    self.stop()
-                    guard self.isEnabled else { return }
-                    self.update()
+                    for window in self.windows.values { window.orderOut(nil) }
+                    self.windows.removeAll()
+                    self.covered.removeAll()
+                    self.sample()
                 }
             }
         }
@@ -99,6 +147,10 @@ final class ScreenBlur: ObservableObject {
 
     private func sample() {
         let displays = CursorDisplay.activeDisplays()
+        guard isEnabled else { return apply([]) }
+        if isCurtain { return apply(Set(displays.map(\.id))) }
+        guard blursOthers else { return apply([]) }
+
         let pointer = CursorDisplay.cursorLocation()
         let now = Date()
         if let under = displays.first(where: { $0.bounds.contains(pointer) })?.id {
@@ -128,6 +180,7 @@ final class ScreenBlur: ObservableObject {
                       over duration: TimeInterval, then: (() -> Void)? = nil) {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             window.animator().alphaValue = alpha
         } completionHandler: {
             then?()

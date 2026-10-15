@@ -28,6 +28,7 @@ struct KeyShortcut: Equatable {
     /// screenshot ones, which never even reach the recorder.
     private static let taken: [(keyCode: Int, owner: String)] = [
         (kVK_ANSI_3, "Screen"), (kVK_ANSI_7, "Text"), (kVK_ANSI_8, "History"),
+        (kVK_ANSI_9, "Blur"),
         (kVK_ANSI_4, "macOS"), (kVK_ANSI_5, "macOS"), (kVK_ANSI_6, "macOS"),
     ]
 

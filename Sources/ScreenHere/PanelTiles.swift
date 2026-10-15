@@ -6,10 +6,11 @@ struct PanelTiles: View {
     @ObservedObject var window: WindowShortcuts
     @ObservedObject var text: TextShortcuts
     @ObservedObject var clipboard: ClipboardController
+    @ObservedObject var blur: ScreenBlur = .shared
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
-                  spacing: 8) {
+        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+            GridRow {
             FeatureTile(icon: "display", title: "Screen", detail: .keys("⇧⌘3"),
                         isOn: model.isOn,
                         help: model.isOn ? "Give ⇧⌘3 back to macOS"
@@ -22,6 +23,8 @@ struct PanelTiles: View {
                             + "Pick the shortcut in the options below.") {
                 window.setEnabled(!window.isEnabled)
             }
+            }
+            GridRow {
             FeatureTile(icon: "text.viewfinder", title: "Text",
                         detail: text.copyTextUnavailable ? .warning("Shortcut in use") : .keys("⇧⌘7"),
                         isOn: text.copyTextEnabled,
@@ -37,6 +40,18 @@ struct PanelTiles: View {
                             + "Password managers' copies are skipped.") {
                 clipboard.setEnabled(!clipboard.isEnabled)
                 text.rebind()
+            }
+            }
+            GridRow {
+            FeatureTile(icon: "eye.slash", title: "Blur",
+                        detail: blur.isEnabled && blur.shortcutUnavailable
+                            ? .warning("Shortcut in use") : .keys("⇧⌘9"),
+                        isOn: blur.isEnabled,
+                        help: "Frost the screen with ⇧⌘9, so nobody standing beside you can read it, "
+                            + "and ⇧⌘9 again to clear it.") {
+                blur.setEnabled(!blur.isEnabled)
+            }
+            .gridCellColumns(2)
             }
         }
     }
@@ -98,6 +113,7 @@ private struct FeatureTile: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 9)
+            .frame(maxWidth: .infinity)
             .frame(height: 50)
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.primary.opacity(hovering ? 0.085 : 0.05)))

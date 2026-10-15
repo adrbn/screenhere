@@ -7,7 +7,7 @@
 
 # ScreenHere
 
-### The three screen shortcuts your Mac and your PC are missing.
+### The screen shortcuts your Mac and your PC are missing.
 
 <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> · <kbd>Win</kbd><kbd>Shift</kbd><kbd>7</kbd> copies any text you can see but can't select.<br/>
 <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> · <kbd>Win</kbd><kbd>Shift</kbd><kbd>3</kbd> captures the screen under your pointer, not both of them.<br/>
@@ -51,7 +51,7 @@ The same goes for a PC: <kbd>PrtSc</kbd> captures every display side by side, in
 
 ScreenHere takes over the shortcuts you already use: <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> turns anything on screen into text on your clipboard, and <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> captures only the display your pointer is on. On Windows they are the same keys with <kbd>Win</kbd> for <kbd>⌘</kbd>. Your destination, file format and shutter sound stay exactly as macOS has them. There is nothing new to learn.
 
-## Three shortcuts
+## Four shortcuts
 
 ### ⇧⌘7 · Win+Shift+7 · Copy the text on your screen
 
@@ -86,11 +86,13 @@ The last 200 things you copied — text, images, files — in a list under your 
 
 **Two computers?** Turn on **Shared clipboard** (a beta) on both, connect them once with a code, and what you copy on one is on the clipboard of the other — a Mac and a PC included. It stays on your network: [how it works](docs/SHARED-CLIPBOARD.md).
 
-## One more thing · Blur the screens you're not on
+### ⇧⌘9 · Win+Shift+9 · Frost the screen
 
-A colleague walks over to your desk and reads your other screen while you talk. Turn on **Blur the screens you're not on** in the panel and every display your pointer is not on is frosted over — the shapes are still there, the words are not. The screen clears the instant your pointer arrives on it, and frosts again a second and a half after it leaves, so glancing across does nothing.
+Somebody walks over to your desk and reads your screen while you talk. Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>9</kbd> and the frost comes down over every display — the shapes are still there, the words are not. Press it again and it lifts. Both ways it fades, so nothing flashes at the person you are talking to.
 
-It is the window server's own blur of what is behind a window, the same one the menu bar uses: nothing is captured, nothing is recorded, no permission is asked for, and what is behind it stays live and in place. On Windows it is the desktop manager's acrylic, with a flat shade on versions too old for it. Off until you turn it on, and nothing happens with a single display.
+Switch on **Blur the screens you're not on** underneath and the other displays frost by themselves: every screen your pointer is away from goes soft, clears the instant your pointer arrives on it, and frosts again a second and a half after it leaves.
+
+It is the window server's own blur of what is behind a window, the same one the menu bar uses: nothing is captured, nothing is recorded, no permission is asked for, and what is behind it stays live and in place. On Windows it is the desktop manager's acrylic, with a flat shade on versions too old for it. Off until you turn it on.
 
 ## On Windows
 

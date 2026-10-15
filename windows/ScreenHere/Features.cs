@@ -43,6 +43,7 @@ internal static class Features
         Feature.Screen => Settings.ScreenEnabled,
         Feature.Window => Settings.WindowEnabled,
         Feature.Text => Settings.TextEnabled,
+        Feature.Blur => Settings.BlurEnabled,
         _ => ClipboardController.Shared.IsEnabled,
     };
 
@@ -54,11 +55,14 @@ internal static class Features
             case Feature.Window: Settings.WindowEnabled = on; break;
             case Feature.Text: Settings.TextEnabled = on; break;
             case Feature.History: ClipboardController.Shared.SetEnabled(on); break;
+            case Feature.Blur: Settings.BlurEnabled = on; break;
         }
         Change();
+        if (feature == Feature.Blur) ScreenBlur.Update();
     }
 
-    public static void SetBlur(bool on)
+    /// On top of the shortcut, frost the displays the pointer is away from.
+    public static void SetBlursOthers(bool on)
     {
         Settings.BlurOtherScreens = on;
         Change();
@@ -178,6 +182,7 @@ internal static class Features
         }
         if (Takes(Feature.Text)) shortcuts[Shortcut(Feature.Text)] = TextCapture.Run;
         if (Takes(Feature.History)) shortcuts[Shortcut(Feature.History)] = HistoryWindow.Toggle;
+        if (Takes(Feature.Blur)) shortcuts[Shortcut(Feature.Blur)] = ScreenBlur.ToggleCurtain;
         Hotkeys.Rebind(shortcuts);
     }
 }

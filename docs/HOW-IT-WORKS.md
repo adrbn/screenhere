@@ -93,11 +93,13 @@ A copied picture is read as well: the fast engine looks at it in a throwaway pro
 
 The history stays on your Mac, in `~/Library/Application Support/ScreenHere`, readable by your account only. Copies that password managers mark as concealed are never recorded. On macOS 15.4 and later, macOS asks before an app reads the clipboard in the background: choose **Always Allow**. Until it is allowed, the panel shows **Allow clipboard access…**, which opens the setting.
 
-## Blurring the screens you're not on
+## Frosting the screen
 
-**Blur the screens you're not on**, in the panel, frosts every display the pointer is not on, so what sits on the screens beside you cannot be read from across the desk. A screen clears the instant the pointer arrives on it and frosts again a second and a half after it leaves, so glancing across does not frost the screen in your face. Nothing happens with a single display, and nothing happens while the pointer is between two of them: frosting the screen being used would be worse than frosting nothing.
+Switch on **Blur** in the panel, then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>9</kbd>: the frost comes down over every display, fading in over a third of a second, and <kbd>⇧</kbd><kbd>⌘</kbd><kbd>9</kbd> again lifts it. The shortcut still answers while the frost is down — it is a global key combination, and the frost takes neither the keyboard nor the mouse — so you are never shut out of your own screen. Switching the feature off in the panel lifts the frost too, and so does quitting.
 
-The frost is an `NSVisualEffectView` blending behind its window, above the menu bar and over a full-screen app, that no click can reach. It is the window server's own blur of what is behind a window: nothing is captured, nothing is recorded, no Screen Recording permission is needed for it, and what is behind it stays live and in place. The pointer is read five times a second, which costs nothing, and the overlays only change when the answer does. They all come off when you switch the setting off and when ScreenHere quits.
+**Blur the screens you're not on**, the option under it, frosts the displays the pointer is away from by itself. A screen clears the instant the pointer arrives on it and frosts again a second and a half after it leaves, so glancing across does not frost the screen in your face. Nothing happens with a single display, and nothing happens while the pointer is between two of them: frosting the screen being used would be worse than frosting nothing. The pointer is read five times a second, which costs nothing, and the overlays only change when the answer does.
+
+The frost is an `NSVisualEffectView` blending behind its window, above the menu bar and over a full-screen app, that no click can reach. It is the window server's own blur of what is behind a window: nothing is captured, nothing is recorded, no Screen Recording permission is needed for it, and what is behind it stays live and in place.
 
 ## Link previews (beta)
 

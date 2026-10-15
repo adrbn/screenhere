@@ -59,6 +59,7 @@ final class KeyShortcutTests: XCTestCase {
         XCTAssertEqual(shortcut(kVK_ANSI_3, shiftKey | cmdKey).problem, .usedBy("Screen"))
         XCTAssertEqual(shortcut(kVK_ANSI_7, shiftKey | cmdKey).problem, .usedBy("Text"))
         XCTAssertEqual(shortcut(kVK_ANSI_8, shiftKey | cmdKey).problem, .usedBy("History"))
+        XCTAssertEqual(shortcut(kVK_ANSI_9, shiftKey | cmdKey).problem, .usedBy("Blur"))
         XCTAssertEqual(shortcut(kVK_ANSI_4, shiftKey | cmdKey).problem, .usedBy("macOS"))
         XCTAssertEqual(shortcut(kVK_ANSI_5, shiftKey | cmdKey).problem, .usedBy("macOS"))
         XCTAssertNil(KeyShortcut.shiftCommand2.problem)

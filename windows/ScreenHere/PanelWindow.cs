@@ -366,6 +366,8 @@ internal sealed class PanelWindow : Window
         tiles.RowDefinitions.Add(new RowDefinition());
         tiles.RowDefinitions.Add(new RowDefinition { Height = new GridLength(8) });
         tiles.RowDefinitions.Add(new RowDefinition());
+        tiles.RowDefinitions.Add(new RowDefinition { Height = new GridLength(8) });
+        tiles.RowDefinitions.Add(new RowDefinition());
 
         var screen = Features.Shortcut(Feature.Screen).Label;
         Place(0, 0, Feature.Screen, on => Ui.Icon(Glyph.Display, 13, on), false,
@@ -377,8 +379,12 @@ internal sealed class PanelWindow : Window
         Place(2, 2, Feature.History, on => Ui.Icon(Glyph.Paste, 13, on), false,
             "Keep what you copy — text, images, files — on this PC, up to 100 MB of images. "
             + "Copies that password managers mark as private are skipped.");
+        Place(4, 0, Feature.Blur, on => Ui.Icon(Glyph.Hide, 13, on), false,
+            $"Frost the screen with {Features.Shortcut(Feature.Blur).Label}, so nobody standing beside you "
+            + "can read it, and the same keys again to clear it.", span: 3);
 
-        void Place(int row, int column, Feature feature, Func<string, UIElement> icon, bool beta, string help)
+        void Place(int row, int column, Feature feature, Func<string, UIElement> icon, bool beta, string help,
+                   int span = 1)
         {
             var isOn = Features.IsOn(feature);
             var owner = isOn ? Features.Conflict(feature) : null;
@@ -387,6 +393,7 @@ internal sealed class PanelWindow : Window
                             () => Features.Set(feature, !isOn));
             Grid.SetRow(tile, row);
             Grid.SetColumn(tile, column);
+            Grid.SetColumnSpan(tile, span);
             tiles.Children.Add(tile);
         }
     }
@@ -428,15 +435,19 @@ internal sealed class PanelWindow : Window
         if (Features.IsOn(Feature.Window)) options.Children.Add(Row(Ui.Stroked(Glyph.Window, 12.5), "Window shortcut", trailing: Recorder(Feature.Window)));
         if (Features.IsOn(Feature.Text)) options.Children.Add(Row(Ui.Stroked(Glyph.TextViewfinder, 12.5), "Text shortcut", trailing: Recorder(Feature.Text)));
         if (Features.IsOn(Feature.History)) options.Children.Add(Row(Ui.Icon(Glyph.Paste, 12), "History shortcut", trailing: Recorder(Feature.History)));
+        if (Features.IsOn(Feature.Blur)) options.Children.Add(Row(Ui.Icon(Glyph.Hide, 12), "Blur shortcut", trailing: Recorder(Feature.Blur)));
         options.Children.Add(Row(Ui.Icon(Glyph.Picture, 12), "Preview on captured screen",
             trailing: Switch(settings.PreviewOnCapturedScreen, Features.SetPreview,
                 "Show a preview of each capture on the screen it came from. Click it to find the file, "
                 + "drag it into another app, or flick it to the right to dismiss it.")));
-        options.Children.Add(Row(Ui.Icon(Glyph.Lock, 12), "Blur the screens you're not on",
-            trailing: Switch(settings.BlurOtherScreens, Features.SetBlur,
-                "Frost every display the pointer is not on, so what is on the screens beside you cannot be "
-                + "read from across the desk. A screen clears the moment your pointer arrives, and frosts "
-                + "again a second after it leaves.")));
+        if (Features.IsOn(Feature.Blur))
+        {
+            options.Children.Add(Row(Ui.Icon(Glyph.Lock, 12), "Blur the screens you're not on",
+                trailing: Switch(settings.BlurOtherScreens, Features.SetBlursOthers,
+                    $"On top of {Features.Shortcut(Feature.Blur).Label}, frost every display the pointer is not "
+                    + "on by itself. A screen clears the moment your pointer arrives, and frosts again a second "
+                    + "after it leaves.")));
+        }
         options.Children.Add(Row(Ui.Icon(Glyph.Power, 12), "Launch at login",
             trailing: Switch(LoginItem.IsEnabled, on =>
             {

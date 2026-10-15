@@ -26,6 +26,10 @@ struct HotkeyCombo: Equatable {
     static let clipboardHistory = HotkeyCombo(
         id: 4, keyCode: UInt32(kVK_ANSI_8), carbonModifiers: UInt32(shiftKey | cmdKey))
 
+    /// ⇧⌘9 — pull the frost over every screen, and off again. Unassigned too.
+    static let blurCurtain = HotkeyCombo(
+        id: 7, keyCode: UInt32(kVK_ANSI_9), carbonModifiers: UInt32(shiftKey | cmdKey))
+
     /// The same modifiers in the Cocoa bit layout macOS stores in
     /// `AppleSymbolicHotKeys ▸ value ▸ parameters[2]`.
     var cocoaModifierMask: Int {
@@ -57,6 +61,8 @@ final class HotkeyRegistrar: HotkeyBinding {
     static let textSignature: OSType = 0x53_43_52_54
     /// 'SCRW' — capturing the window under the pointer.
     static let windowSignature: OSType = 0x53_43_52_57
+    /// 'SCRB' — the frost over the screens.
+    static let blurSignature: OSType = 0x53_43_52_42
 
     /// Each registrar installs its own handler, and a handler that recognises
     /// an event consumes it. Distinct signatures keep one registrar from
