@@ -28,8 +28,10 @@ internal sealed class Updater
     private string? downloadUrl;
     private readonly DispatcherTimer daily = new() { Interval = TimeSpan.FromHours(6) };
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(60) };
-    /// For the update itself, which takes as long as the line needs.
+    /// For the update itself, which takes as long as the line needs — but
+    /// not longer than a minute without a single byte arriving.
     private static readonly HttpClient Downloads = new() { Timeout = Timeout.InfiniteTimeSpan };
+    private static readonly TimeSpan Stall = TimeSpan.FromSeconds(60);
 
     public static string CurrentVersion { get; } =
         Assembly.GetExecutingAssembly().GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.0.0";
@@ -121,17 +123,24 @@ internal sealed class Updater
         var old = running + ".old";
         try
         {
-            // Unless an earlier try already put the new build in place and
-            // only failed to start it: then there is nothing left to fetch.
-            if (!Swapped(running, old))
+            // Off the interface's thread: seventy megabytes written a chunk at
+            // a time would otherwise run entirely on it, and a thread that is
+            // busy writing paints nothing and answers no button — which is
+            // what updating looked like from the outside.
+            await Task.Run(async () =>
             {
-                await Download(downloadUrl, fresh);
-                // A running program cannot be overwritten, but it can be renamed.
-                File.Delete(old);
-                File.Move(running, old);
-                File.Move(fresh, running);
-            }
-            await Relaunch(running);
+                // Unless an earlier try already put the new build in place and
+                // only failed to start it: then there is nothing left to fetch.
+                if (!Swapped(running, old))
+                {
+                    await Download(downloadUrl, fresh);
+                    // A running program cannot be overwritten, but it can be renamed.
+                    File.Delete(old);
+                    File.Move(running, old);
+                    File.Move(fresh, running);
+                }
+                await Relaunch(running);
+            });
             ((App)System.Windows.Application.Current).Quit();
         }
         catch
@@ -151,23 +160,28 @@ internal sealed class Updater
     /// minute a request is given by default, and more than memory needs to hold.
     private async Task Download(string url, string target)
     {
-        using var response = await Downloads.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        // A line that goes quiet for a minute has stopped, and waiting on it
+        // for ever is how an update sits on "Updating…" until the app is killed.
+        using var stall = new CancellationTokenSource(Stall);
+        using var response = await Downloads.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, stall.Token);
         response.EnsureSuccessStatusCode();
         var total = response.Content.Headers.ContentLength ?? 0;
-        await using (var source = await response.Content.ReadAsStreamAsync())
-        await using (var file = File.Create(target))
+        await using (var source = await response.Content.ReadAsStreamAsync(stall.Token))
+        await using (var file = new FileStream(target, FileMode.Create, FileAccess.Write,
+                                               FileShare.None, 128 * 1024, useAsync: true))
         {
             var buffer = new byte[128 * 1024];
             long done = 0;
             var shown = 0.0;
             int read;
-            while ((read = await source.ReadAsync(buffer)) > 0)
+            while ((read = await source.ReadAsync(buffer, stall.Token)) > 0)
             {
-                await file.WriteAsync(buffer.AsMemory(0, read));
+                await file.WriteAsync(buffer.AsMemory(0, read), stall.Token);
+                stall.CancelAfter(Stall);
                 done += read;
                 if (total <= 0 || (double)done / total - shown < 0.01) continue;
                 Progress = shown = (double)done / total;
-                Changed?.Invoke();
+                Notify();
             }
         }
         var head = new byte[2];
@@ -210,6 +224,15 @@ internal sealed class Updater
     private void Set(Status state, bool notify)
     {
         State = state;
-        if (notify) Changed?.Invoke();
+        if (notify) Notify();
+    }
+
+    /// The panel is built of interface objects, so it is told from the thread
+    /// that owns them whoever noticed the change.
+    private void Notify()
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher == null || dispatcher.CheckAccess()) Changed?.Invoke();
+        else dispatcher.BeginInvoke(() => Changed?.Invoke());
     }
 }
