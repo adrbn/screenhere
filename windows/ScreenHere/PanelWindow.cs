@@ -806,12 +806,18 @@ internal sealed class PanelWindow : Window
         var updater = Updater.Shared;
         var available = updater.AvailableVersion;
         var label = new StackPanel { Orientation = Orientation.Horizontal };
-        label.Children.Add(Ui.Icon(updater.State == Updater.Status.UpToDate ? Glyph.Check : Glyph.Download, 12,
+        label.Children.Add(Ui.Icon(updater.State switch
+                                   {
+                                       Updater.Status.UpToDate => Glyph.Check,
+                                       Updater.Status.Unreachable => Glyph.Warning,
+                                       _ => Glyph.Download,
+                                   }, 12,
                                    available != null ? "BrandText" : "Secondary"));
         label.Children.Add(Ui.Text(updater.State switch
         {
             Updater.Status.Checking => "Checking…",
             Updater.Status.UpToDate => "Up to date",
+            Updater.Status.Unreachable => "Couldn't check",
             Updater.Status.Installing => updater.Progress is > 0 and < 1 ? $"Updating… {updater.Progress:P0}"
                                         : updater.Downloaded > 0 ? $"Updating… {updater.Downloaded / 1_048_576} MB"
                                         : "Updating…",

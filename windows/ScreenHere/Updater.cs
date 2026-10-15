@@ -13,7 +13,7 @@ internal sealed class Updater
 {
     public static Updater Shared { get; } = new();
 
-    public enum Status { Idle, Checking, UpToDate, Installing }
+    public enum Status { Idle, Checking, UpToDate, Installing, Unreachable }
 
     /// The file a release carries for Windows. Releases without it — a fix
     /// that only concerns the Mac — are passed over.
@@ -26,6 +26,8 @@ internal sealed class Updater
     public event Action? Changed;
 
     private string? downloadUrl;
+    /// Whether the last check reached GitHub at all.
+    private bool reached = true;
     private readonly DispatcherTimer daily = new() { Interval = TimeSpan.FromHours(6) };
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(60) };
     /// For the update itself, which takes as long as the line needs — but
@@ -61,6 +63,7 @@ internal sealed class Updater
     {
         if (State is Status.Checking or Status.Installing) return;
         Set(Status.Checking, byUser);
+        reached = true;
         try
         {
             using var document = JsonDocument.Parse(await Client.GetStringAsync(Releases));
@@ -70,14 +73,20 @@ internal sealed class Updater
             AvailableVersion = found?.Version;
             downloadUrl = found?.Url;
         }
-        catch
+        catch (Exception error)
         {
-            // Offline: asked again tomorrow, or when the user asks.
+            // Offline, or GitHub has had enough questions for one hour. Asked
+            // again tomorrow, or when the user asks — but said plainly, since
+            // "up to date" from a check that never happened is a lie.
+            reached = false;
+            Trace("check failed: " + error.Message);
         }
-        Set(AvailableVersion == null && byUser ? Status.UpToDate : Status.Idle, notify: true);
-        if (State != Status.UpToDate) return;
+        Set(AvailableVersion != null || !byUser ? Status.Idle
+            : reached ? Status.UpToDate : Status.Unreachable, notify: true);
+        if (State is not (Status.UpToDate or Status.Unreachable)) return;
+        var answered = State;
         await Task.Delay(2500);
-        if (State == Status.UpToDate) Set(Status.Idle, notify: true);
+        if (State == answered) Set(Status.Idle, notify: true);
     }
 
     /// The newest release above `current` that has a Windows build, and where
