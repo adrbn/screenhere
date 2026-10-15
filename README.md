@@ -30,14 +30,8 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.png">
-  <img src="docs/assets/hero-light.png" width="430" align="top" alt="ScreenHere on the Mac, open under its menu-bar icon: a live map of two displays with the one under the pointer highlighted, and a tile for each shortcut" />
+  <img src="docs/assets/hero-light.png" width="470" alt="ScreenHere on the Mac, open under its menu-bar icon: a live map of two displays with the one under the pointer highlighted, and a tile for each shortcut" />
 </picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/windows-panel-dark.png">
-  <img src="docs/assets/windows-panel-light.png" width="350" align="top" alt="ScreenHere on Windows: the same panel, with the same map, the same tiles and the same rooms of settings" />
-</picture>
-
-<sub>The same panel on the Mac and on Windows.</sub>
 
 </div>
 
@@ -106,6 +100,11 @@ The frost is a real blur of your screen: ScreenHere takes one small picture of e
 Everything you can change sits behind three doors — Captures, Privacy screen, Clipboard. The panel shows one room at a time, so it no longer grows taller with every feature you switch on, and a setting has the space for the line that says what it does instead of a tooltip you had to find.
 
 ## On Windows
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/windows-panel-dark.png">
+  <img src="docs/assets/windows-panel-light.png" width="368" alt="The same panel on Windows: the live map of the displays, a tile per shortcut, and the same rooms of settings" />
+</picture>
 
 The same app, on Windows 10 and 11: <kbd>Win</kbd><kbd>Shift</kbd><kbd>3</kbd> for the screen under the pointer, <kbd>Win</kbd><kbd>Shift</kbd><kbd>2</kbd> for the window, <kbd>Win</kbd><kbd>Shift</kbd><kbd>7</kbd> for text and <kbd>Win</kbd><kbd>Shift</kbd><kbd>8</kbd> for the history, behind the same panel. Text is read by Windows' own recogniser, on your PC.
 
