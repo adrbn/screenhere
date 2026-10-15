@@ -64,6 +64,26 @@ final class PanelModel: ObservableObject {
     /// Called by the panel once it knows its window. From then on the window's
     /// occlusion state drives polling: it starts when the panel is ordered in
     /// and stops when it is ordered out, whatever SwiftUI's lifecycle does.
+    /// Keeps the window the height of what is in it.
+    ///
+    /// MenuBarExtra sizes its window when the panel opens and never shrinks it
+    /// again, so a room — a third of the hall's height — sat in the middle of
+    /// an empty window. The panel hangs from the menu bar, so the top edge is
+    /// the one that stays put.
+    func fit(height: CGFloat) {
+        guard let window = panelWindow, height > 1 else { return }
+        if abs(window.frame.height - height) > 0.5 {
+            var frame = window.frame
+            frame.origin.y = frame.maxY - height
+            frame.size.height = height
+            window.setFrame(frame, display: true)
+        }
+        // And the shadow keeps the shape the panel had when it opened, so
+        // without this the hall's outline hangs around an open room: an empty
+        // frame above it and below it.
+        window.invalidateShadow()
+    }
+
     func attach(window: NSWindow) {
         guard window !== panelWindow else { return }
         if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }

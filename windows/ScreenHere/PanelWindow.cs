@@ -209,7 +209,19 @@ internal sealed class PanelWindow : Window
     /// The way out of a room, in the corner every panel puts it in.
     private readonly ContentControl back = new() { Focusable = false, Visibility = Visibility.Collapsed };
 
+    /// Changing room is one move: what is there goes before what follows
+    /// arrives, and it arrives from the side the panel is travelling.
     private void Enter(string? name)
+    {
+        var leaving = room == null ? (UIElement)hall : back;
+        var gone = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(90))
+            { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+        gone.Completed += (_, _) => Show(name);
+        options.BeginAnimation(OpacityProperty, gone.Clone());
+        leaving.BeginAnimation(OpacityProperty, gone);
+    }
+
+    private void Show(string? name)
     {
         room = name;
         hall.Visibility = name == null ? Visibility.Visible : Visibility.Collapsed;
@@ -222,6 +234,20 @@ internal sealed class PanelWindow : Window
             back.Content = Ui.Press("Row", label, () => Enter(null)).With(b => b.Margin = new Thickness(6, 4, 6, 0));
         }
         RefreshOptions();
+        // Forward goes in from the right, back from the left, the way a page
+        // of settings moves on a phone.
+        Arrive(name == null ? (UIElement)hall : back, name == null ? -14 : 14);
+        Arrive(options, name == null ? -14 : 14);
+    }
+
+    private static void Arrive(UIElement part, double from)
+    {
+        var time = TimeSpan.FromMilliseconds(170);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var shift = new TranslateTransform(from, 0);
+        part.RenderTransform = shift;
+        shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(from, 0, time) { EasingFunction = ease });
+        part.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, time) { EasingFunction = ease });
     }
 
     private static TextBlock SectionTitle(string text) =>

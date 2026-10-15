@@ -40,6 +40,13 @@ struct PanelView: View {
         .clipped()
         .animation(reduceMotion ? .easeOut(duration: 0.12) : .easeInOut(duration: 0.22), value: page)
         .background(WindowReader { model.attach(window: $0) })
+        // The window does not shrink on its own when a room takes less room
+        // than the hall it came from.
+        .background(GeometryReader { geometry in
+            Color.clear
+                .onAppear { model.fit(height: geometry.size.height) }
+                .onChange(of: geometry.size.height) { model.fit(height: $0) }
+        })
         // Reopened from the menu bar, the panel starts where it started last
         // time: at the front.
         .onDisappear { page = nil }
