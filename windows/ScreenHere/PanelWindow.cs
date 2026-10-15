@@ -88,6 +88,10 @@ internal sealed class PanelWindow : Window
         };
         Ui.ShowOn(panel, display, panel.anchor, activate: true);
         panel.Rise();
+        // A click anywhere else closes it, whether or not Windows gave it the
+        // keyboard to lose: the desktop and the taskbar take a click without
+        // taking the keyboard, so losing it is not enough to know.
+        Hotkeys.WatchClicks(panel.ClickedAt);
     }
 
     public PanelWindow(PanelPose? pose)
@@ -122,7 +126,11 @@ internal sealed class PanelWindow : Window
             SyncController.Shared.EndPairing();
             Updater.Shared.Changed -= RefreshUpdate;
             Features.EndRecording();
-            if (current == this) current = null;
+            if (current == this)
+            {
+                current = null;
+                Hotkeys.WatchClicks(null);
+            }
             Memory.SettleSoon(3);
         };
         // Clicking anywhere else dismisses it, like any flyout.
@@ -152,6 +160,19 @@ internal sealed class PanelWindow : Window
         closing = true;
         Tray.Shared.PanelClosedAt = DateTime.Now;
         Close();
+    }
+
+    /// A mouse button went down at this point of the screen. Outside the
+    /// panel — its shadow is outside too — that closes it.
+    private void ClickedAt(int x, int y)
+    {
+        if (closing) return;
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero || !Native.GetWindowRect(handle, out var frame)) return;
+        var shadow = (int)(ShadowRoom * VisualTreeHelper.GetDpi(this).DpiScaleX);
+        var inside = x >= frame.Left + shadow && x < frame.Right - shadow
+                     && y >= frame.Top + shadow && y < frame.Bottom - shadow;
+        if (!inside) Dismiss();
     }
 
     /// Arrives from just below where it rests, the way a flyout does.

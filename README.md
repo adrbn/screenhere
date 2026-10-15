@@ -92,7 +92,7 @@ Somebody walks over to your desk and reads your screen while you talk. Press <kb
 
 Switch on **Blur the screens you're not on** underneath and the other displays frost by themselves: every screen your pointer is away from goes soft, clears the instant your pointer arrives on it, and frosts again a second and a half after it leaves.
 
-It is the window server's own blur of what is behind a window, the same one the menu bar uses: nothing is captured, nothing is recorded, no permission is asked for, and what is behind it stays live and in place. On Windows it is the desktop manager's acrylic, with a flat shade on versions too old for it. Off until you turn it on.
+The frost is a real blur of your screen: ScreenHere takes one small picture of each display as the frost comes down, blurs it, and shows that. The picture lives in memory for as long as the frost does and is never written anywhere — not to the history, not to disk. It uses the Screen Recording permission the app already has; without it, or before macOS 14, you get the window server's frosted sheet instead. On Windows it is the desktop manager's acrylic, with a flat shade on versions too old for it. Off until you turn it on.
 
 ## On Windows
 

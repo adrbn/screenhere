@@ -99,7 +99,9 @@ Switch on **Blur** in the panel, then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>9</
 
 **Blur the screens you're not on**, the option under it, frosts the displays the pointer is away from by itself. A screen clears the instant the pointer arrives on it and frosts again a second and a half after it leaves, so glancing across does not frost the screen in your face. Nothing happens with a single display, and nothing happens while the pointer is between two of them: frosting the screen being used would be worse than frosting nothing. The pointer is read five times a second, which costs nothing, and the overlays only change when the answer does.
 
-The frost is an `NSVisualEffectView` blending behind its window, above the menu bar and over a full-screen app, that no click can reach. It is the window server's own blur of what is behind a window: nothing is captured, nothing is recorded, no Screen Recording permission is needed for it, and what is behind it stays live and in place.
+The frost is a borderless panel above the menu bar and over a full-screen app, that no click can reach, holding a blurred picture of the display. The picture is taken through ScreenCaptureKit at a quarter size the moment the frost comes down — ScreenHere leaves itself out of it, so one frost can never end up inside the picture of the next — and blurred with a gaussian. It stays in memory, is never written anywhere, and goes when the frost does. Asking macOS what is shareable costs about sixty milliseconds, so that is done when the feature is switched on rather than when the key is pressed.
+
+A still picture rather than the window server's own behind-window blur, which is what this used to be: that one is a tinted sheet laid over the screen rather than a blur of what is on it, and it drops out while macOS slides between desktops — the one moment a frost must not lift. It is still what you get before macOS 14, or if Screen Recording has not been granted.
 
 ## Link previews (beta)
 

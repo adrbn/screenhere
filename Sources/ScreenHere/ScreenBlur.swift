@@ -7,9 +7,9 @@ enum BlurPrefs {
 
 /// Frosts the screen, so what is on it cannot be read from across the desk.
 /// ⇧⌘9 pulls the frost over every display at once, and an option frosts the
-/// displays the pointer is not on by itself. The frost is the window server's
-/// own blur of what is behind a window: nothing is captured, nothing is
-/// recorded, and what is behind it stays live and in place.
+/// displays the pointer is not on by itself. The frost is a blurred picture of
+/// the screen taken the moment it comes down — see `ScreenShade` — kept in
+/// memory and thrown away with the frost.
 @MainActor
 final class ScreenBlur: ObservableObject {
     static let shared = ScreenBlur()
@@ -109,6 +109,7 @@ final class ScreenBlur: ObservableObject {
         shortcutUnavailable = isEnabled && !registrar.bind([.blurCurtain]) { _ in
             MainActor.assumeIsolated { ScreenBlur.shared.toggleCurtain() }
         }
+        if isEnabled, #available(macOS 14.0, *) { Task { await ScreenShade.warm() } }
 
         if isEnabled && blursOthers {
             if timer == nil {
@@ -132,12 +133,16 @@ final class ScreenBlur: ObservableObject {
                 forName: NSApplication.didChangeScreenParametersNotification,
                 object: nil, queue: .main
             ) { _ in
-                // A display that moved or changed size keeps its identifier,
-                // so the overlays are built again rather than resized.
+                // Switching desktops sets this off as well, so the overlays
+                // are moved rather than rebuilt: a frost that blinks off
+                // mid-swipe shows what it is there to hide.
                 MainActor.assumeIsolated {
-                    for window in self.windows.values { window.orderOut(nil) }
-                    self.windows.removeAll()
-                    self.covered.removeAll()
+                    for (id, window) in self.windows {
+                        guard let screen = Self.screen(for: id) else { continue }
+                        window.setFrame(screen.frame, display: true)
+                    }
+                    // A display that really went away is simply missing from
+                    // the next sample, and its cover goes with it.
                     self.sample()
                 }
             }
@@ -147,6 +152,10 @@ final class ScreenBlur: ObservableObject {
 
     private func sample() {
         let displays = CursorDisplay.activeDisplays()
+        // Sliding between desktops makes the display list come back empty for
+        // an instant. Taking that as "no screens" drops the frost in the
+        // middle of the swipe, which is the one moment it must not lift.
+        guard !displays.isEmpty else { return }
         guard isEnabled else { return apply([]) }
         if isCurtain { return apply(Set(displays.map(\.id))) }
         guard blursOthers else { return apply([]) }
@@ -171,9 +180,24 @@ final class ScreenBlur: ObservableObject {
             guard let screen = Self.screen(for: id) else { continue }
             let window = Self.overlay(over: screen)
             windows[id] = window
-            window.orderFrontRegardless()
-            fade(window, to: 1, over: Self.fadeIn)
+            guard #available(macOS 14.0, *) else {
+                show(window)
+                continue
+            }
+            // The picture is taken before anything is on screen, and the
+            // window stays empty — and invisible — until it is there.
+            Task { [weak self] in
+                let shade = await ScreenShade.blurred(display: id)
+                guard let self, self.windows[id] === window else { return }
+                if let shade { window.contentView = Self.picture(shade, over: screen) }
+                self.show(window)
+            }
         }
+    }
+
+    private func show(_ window: NSWindow) {
+        window.orderFrontRegardless()
+        fade(window, to: 1, over: Self.fadeIn)
     }
 
     private func fade(_ window: NSWindow, to alpha: CGFloat,
@@ -209,20 +233,26 @@ final class ScreenBlur: ObservableObject {
         panel.isReleasedWhenClosed = false
         panel.alphaValue = 0
 
+        // Until the picture arrives — and instead of it, before macOS 14 or
+        // without Screen Recording — the window server's own frost. It is a
+        // tinted sheet rather than a blur of the screen, but it hides.
         let frost = NSVisualEffectView(frame: NSRect(origin: .zero, size: screen.frame.size))
         frost.material = .fullScreenUI
         frost.blendingMode = .behindWindow
         frost.state = .active
         frost.autoresizingMask = [.width, .height]
-        // The frost alone still leaves shapes and colours; a thin shade over
-        // it is what makes a window unreadable rather than merely soft.
-        let shade = NSView(frame: frost.bounds)
-        shade.wantsLayer = true
-        shade.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.18).cgColor
-        shade.autoresizingMask = [.width, .height]
-        frost.addSubview(shade)
         panel.contentView = frost
         panel.setFrame(screen.frame, display: false)
         return panel
+    }
+
+    /// The blurred picture, filling the display whatever its own size — it is
+    /// taken at a quarter of it.
+    private static func picture(_ image: NSImage, over screen: NSScreen) -> NSView {
+        let view = NSImageView(frame: NSRect(origin: .zero, size: screen.frame.size))
+        view.image = image
+        view.imageScaling = .scaleAxesIndependently
+        view.autoresizingMask = [.width, .height]
+        return view
     }
 }
