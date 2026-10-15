@@ -3,6 +3,7 @@ import AppKit
 enum BlurPrefs {
     static let enabledKey = "BlurEnabled"
     static let othersKey = "BlurOtherScreensEnabled"
+    static let holdKey = "BlurHoldsDesktopEnabled"
 }
 
 /// Frosts the screen, so what is on it cannot be read from across the desk.
@@ -20,6 +21,8 @@ final class ScreenBlur: ObservableObject {
     @Published private(set) var isCurtain = false
     /// Frost the displays the pointer is away from, on its own.
     @Published private(set) var blursOthers = false
+    /// Keep the desktop from sliding while the frost is down (beta).
+    @Published private(set) var holdsDesktop = false
     /// ⇧⌘9 is registered by another app.
     @Published private(set) var shortcutUnavailable = false
 
@@ -58,6 +61,7 @@ final class ScreenBlur: ObservableObject {
     func activate() {
         isEnabled = UserDefaults.standard.bool(forKey: BlurPrefs.enabledKey)
         blursOthers = UserDefaults.standard.bool(forKey: BlurPrefs.othersKey)
+        holdsDesktop = UserDefaults.standard.bool(forKey: BlurPrefs.holdKey)
         update()
     }
 
@@ -76,14 +80,19 @@ final class ScreenBlur: ObservableObject {
         update()
     }
 
+    func setHoldsDesktop(_ on: Bool) {
+        UserDefaults.standard.set(on, forKey: BlurPrefs.holdKey)
+        holdsDesktop = on
+        // Nothing else in ScreenHere wants Accessibility, so it is asked for
+        // here and nowhere else.
+        if on, !SwipeGuard.isAllowed { SwipeGuard.ask() }
+        update()
+    }
+
     /// ⇧⌘9: the frost over every display, and off again.
     func toggleCurtain() {
         guard isEnabled else { return }
         isCurtain.toggle()
-        // The desktop has to stop sliding for the frost to stay put, and that
-        // needs Accessibility. Asked for the first time the curtain comes
-        // down, not at launch: nothing else in ScreenHere wants it.
-        if isCurtain, !SwipeGuard.isAllowed { SwipeGuard.ask() }
         update()
     }
 
@@ -115,7 +124,7 @@ final class ScreenBlur: ObservableObject {
             MainActor.assumeIsolated { ScreenBlur.shared.toggleCurtain() }
         }
         if isEnabled, #available(macOS 14.0, *) { Task { await ScreenShade.warm() } }
-        if isCurtain { SwipeGuard.start() } else { SwipeGuard.stop() }
+        if isCurtain && holdsDesktop { SwipeGuard.start() } else { SwipeGuard.stop() }
 
         if isEnabled && blursOthers {
             if timer == nil {

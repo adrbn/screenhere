@@ -36,6 +36,13 @@ struct PanelOptions: View {
                               + "A screen clears the moment your pointer arrives, and frosts again "
                               + "a second after it leaves.")
                 }
+                PanelRow(icon: "hand.raised", title: "Hold the desktop still", beta: true) {
+                    toggle(isOn: blur.holdsDesktop, set: blur.setHoldsDesktop)
+                        .help("While the frost is down, stop the three-finger swipe and ⌃←/⌃→ from "
+                              + "changing desktop. macOS draws no window at all while it slides between "
+                              + "desktops, so the frost lifts for an instant unless the slide is stopped. "
+                              + "Needs Accessibility, and does not catch every swipe.")
+                }
             }
             PanelRow(icon: "power", title: "Launch at login") {
                 toggle(isOn: model.launchesAtLogin, set: model.setLaunchAtLogin)
