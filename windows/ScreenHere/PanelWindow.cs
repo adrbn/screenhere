@@ -39,7 +39,6 @@ internal sealed class PanelWindow : Window
     private readonly StackPanel options = new() { Margin = new Thickness(6, 0, 6, 0) };
     private readonly ContentControl update = new() { Focusable = false };
     private readonly DispatcherTimer poll = new() { Interval = TimeSpan.FromMilliseconds(100) };
-    private bool confirmingClear;
     private bool closing;
     private string held = "";
     private string? problem;
@@ -194,13 +193,17 @@ internal sealed class PanelWindow : Window
         root.Children.Add(SectionTitle("Shortcuts"));
         tiles.Margin = new Thickness(10, 0, 10, 0);
         root.Children.Add(tiles);
-        root.Children.Add(SectionTitle("Options").With(t => t.Margin = new Thickness(14, 10, 14, 6)));
-        root.Children.Add(options);
+        root.Children.Add(options.With(o => o.Margin = new Thickness(0, 10, 0, 0)));
         root.Children.Add(new Border { Height = 1, Margin = new Thickness(12, 6, 12, 0) }
             .With(b => b.SetResourceReference(Border.BackgroundProperty, "P10")));
         root.Children.Add(Footer());
         return root;
     }
+
+    /// Names what the settings under it change. The first one needs no gap
+    /// above it: the tiles already left one.
+    private static TextBlock Group(string text, bool first = false) =>
+        Ui.Text(text, 11, FontWeights.SemiBold, "Secondary").With(t => t.Margin = new Thickness(14, first ? 0 : 9, 14, 3));
 
     private static TextBlock SectionTitle(string text) =>
         Ui.Text(text, 11, FontWeights.SemiBold, "Secondary").With(t => t.Margin = new Thickness(14, 0, 14, 6));
@@ -246,6 +249,11 @@ internal sealed class PanelWindow : Window
         more = Ui.Press("Round", Ui.Icon(Glyph.More, 13), () =>
         {
             var menu = new ContextMenu { PlacementTarget = more, Placement = PlacementMode.Top, HorizontalOffset = -150 };
+            // Set once and never looked at again, which is what this menu is
+            // for — the options list is for what gets changed.
+            menu.Items.Add(new MenuItem { Header = "Open at Login", IsCheckable = true, IsChecked = LoginItem.IsEnabled }
+                .With(i => i.Click += (_, _) => LoginItem.SetEnabled(((MenuItem)i).IsChecked)));
+            menu.Items.Add(new Separator());
             menu.Items.Add(Item("View on GitHub", () => Open("https://github.com/adrbn/screenhere")));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Open Screenshots Folder", () => Open(Capture.Folder)));
@@ -399,26 +407,28 @@ internal sealed class PanelWindow : Window
             "Select part of the screen and copy the text in it, recognised on this PC.");
         Place(2, 2, Feature.History, on => Ui.Icon(Glyph.Paste, 13, on), false,
             "Keep what you copy — text, images, files — on this PC, up to 100 MB of images. "
-            + "Copies that password managers mark as private are skipped.");
+            + "Copies that password managers mark as private are skipped.",
+            count: Features.IsOn(Feature.History) ? ClipboardController.Shared.History.Items.Count.ToString() : null);
         Place(4, 0, Feature.Blur, on => Ui.Icon(Glyph.Hide, 13, on), false,
             $"Frost the screen with {Features.Shortcut(Feature.Blur).Label}, so nobody standing beside you "
             + "can read it, and the same keys again to clear it.", span: 3);
 
         void Place(int row, int column, Feature feature, Func<string, UIElement> icon, bool beta, string help,
-                   int span = 1)
+                   int span = 1, string? count = null)
         {
             var isOn = Features.IsOn(feature);
             var owner = isOn ? Features.Conflict(feature) : null;
             var tile = Tile(icon, feature.ToString(), beta, owner != null ? $"Used by {owner}" : Features.Shortcut(feature).Label, owner != null,
                             isOn, owner != null ? $"{Features.Shortcut(feature).Label} belongs to {owner}, and ScreenHere leaves it alone. Pick another shortcut in the options below." : help,
-                            () => Features.Set(feature, !isOn));
+                            () => Features.Set(feature, !isOn), count);
             Grid.SetRow(tile, row);
             Grid.SetColumn(tile, column);
             Grid.SetColumnSpan(tile, span);
             tiles.Children.Add(tile);
         }
     }
-    private static Button Tile(Func<string, UIElement> icon, string title, bool beta, string keys, bool warning, bool isOn, string help, Action action)
+    private static Button Tile(Func<string, UIElement> icon, string title, bool beta, string keys, bool warning, bool isOn, string help, Action action,
+                               string? count = null)
     {
         var badge = new Grid { Width = 28, Height = 28 };
         var disc = new Ellipse();
@@ -434,8 +444,11 @@ internal sealed class PanelWindow : Window
         texts.Children.Add(heading);
         texts.Children.Add(Ui.Text(keys, 10.5, FontWeights.Medium, warning ? "Warning" : "Secondary").With(t => t.Margin = new Thickness(0, 1, 0, 0)));
 
-        var content = new DockPanel();
+        var content = new DockPanel { LastChildFill = false };
         content.Children.Add(badge.Docked(Dock.Left));
+        // How much the feature is holding, when that is the thing worth
+        // knowing at a glance — so no row below has to repeat it.
+        if (count != null) content.Children.Add(Ui.Text(count, 11, FontWeights.Medium, "Secondary").With(t => t.VerticalAlignment = VerticalAlignment.Center).Docked(Dock.Right));
         content.Children.Add(texts);
         return Ui.Press("Tile", content, action, help);
     }
@@ -450,52 +463,39 @@ internal sealed class PanelWindow : Window
         var clipboard = ClipboardController.Shared;
         options.Children.Clear();
 
-        // Every shortcut can be changed: keyboards differ, and so do the
-        // shortcuts other apps got to first.
+        // Each setting sits under the feature it changes, shortcuts included:
+        // keyboards differ, and so do the shortcuts other apps got to first.
+        options.Children.Add(Group("Captures", first: true));
         if (Features.IsOn(Feature.Screen)) options.Children.Add(Row(Ui.Icon(Glyph.Display, 12), "Screen shortcut", trailing: Recorder(Feature.Screen)));
         if (Features.IsOn(Feature.Window)) options.Children.Add(Row(Ui.Stroked(Glyph.Window, 12.5), "Window shortcut", trailing: Recorder(Feature.Window)));
         if (Features.IsOn(Feature.Text)) options.Children.Add(Row(Ui.Stroked(Glyph.TextViewfinder, 12.5), "Text shortcut", trailing: Recorder(Feature.Text)));
-        if (Features.IsOn(Feature.History)) options.Children.Add(Row(Ui.Icon(Glyph.Paste, 12), "History shortcut", trailing: Recorder(Feature.History)));
-        if (Features.IsOn(Feature.Blur)) options.Children.Add(Row(Ui.Icon(Glyph.Hide, 12), "Blur shortcut", trailing: Recorder(Feature.Blur)));
         options.Children.Add(Row(Ui.Icon(Glyph.Picture, 12), "Preview on captured screen",
             trailing: Switch(settings.PreviewOnCapturedScreen, Features.SetPreview,
                 "Show a preview of each capture on the screen it came from. Click it to find the file, "
                 + "drag it into another app, or flick it to the right to dismiss it.")));
+
         if (Features.IsOn(Feature.Blur))
         {
+            options.Children.Add(Group("Privacy screen"));
+            options.Children.Add(Row(Ui.Icon(Glyph.Hide, 12), "Blur shortcut", trailing: Recorder(Feature.Blur)));
             options.Children.Add(Row(Ui.Icon(Glyph.Lock, 12), "Blur the screens you're not on",
                 trailing: Switch(settings.BlurOtherScreens, Features.SetBlursOthers,
                     $"On top of {Features.Shortcut(Feature.Blur).Label}, frost every display the pointer is not "
                     + "on by itself. A screen clears the moment your pointer arrives, and frosts again a second "
                     + "after it leaves.")));
         }
-        options.Children.Add(Row(Ui.Icon(Glyph.Power, 12), "Launch at login",
-            trailing: Switch(LoginItem.IsEnabled, on =>
-            {
-                LoginItem.SetEnabled(on);
-                Refresh();
-            })));
 
-        AddSharedClipboard();
-
-        if (!clipboard.IsEnabled) return;
-        options.Children.Add(Row(Ui.Icon(Glyph.Link, 12), "Link previews", beta: true,
-            trailing: Switch(LinkPreviews.Shared.IsEnabled, LinkPreviews.Shared.SetEnabled,
-                "Show the title and icon of copied links in the list. ScreenHere visits a link when the list "
-                + "shows it, without cookies, and never one that looks private or single-use. The site sees "
-                + "the visit, as it would if you opened the link.")));
-        options.Children.Add(Row(Ui.Icon(Glyph.History, 12), "Show history",
-            trailingText: clipboard.History.Items.Count.ToString(),
-            action: () =>
-            {
-                Dismiss();
-                HistoryWindow.Open();
-            }));
-        options.Children.Add(confirmingClear ? ClearQuestion() : Row(Ui.Icon(Glyph.Trash, 12), "Clear history", action: () =>
+        options.Children.Add(Group("Clipboard"));
+        if (Features.IsOn(Feature.History)) options.Children.Add(Row(Ui.Icon(Glyph.History, 12), "History shortcut", trailing: Recorder(Feature.History)));
+        if (clipboard.IsEnabled)
         {
-            confirmingClear = true;
-            RefreshOptions();
-        }));
+            options.Children.Add(Row(Ui.Icon(Glyph.Link, 12), "Link previews", beta: true,
+                trailing: Switch(LinkPreviews.Shared.IsEnabled, LinkPreviews.Shared.SetEnabled,
+                    "Show the title and icon of copied links in the list. ScreenHere visits a link when the list "
+                    + "shows it, without cookies, and never one that looks private or single-use. The site sees "
+                    + "the visit, as it would if you opened the link.")));
+        }
+        AddSharedClipboard();
     }
 
     /// The clipboard shared with one other device, and the few steps that
@@ -696,27 +696,6 @@ internal sealed class PanelWindow : Window
         {
             tint.BeginAnimation(OpacityProperty, new DoubleAnimation(isOn ? 0 : 1, isOn ? 1 : 0, duration) { FillBehavior = FillBehavior.Stop });
         }
-    }
-
-    /// Asked in place: a dialog on top of a flyout is a popup in a popup.
-    private FrameworkElement ClearQuestion()
-    {
-        var total = ClipboardController.Shared.History.Items.Count;
-        var content = new DockPanel { LastChildFill = false };
-        content.Children.Add(new Grid { Width = 16, Children = { Ui.Icon(Glyph.Trash, 12, "Danger") } }.Docked(Dock.Left));
-        content.Children.Add(Ui.Text(total == 1 ? "Clear the only item?" : $"Clear all {total} items?", 12)
-            .With(t => t.Margin = new Thickness(8, 0, 0, 1)).Docked(Dock.Left));
-        content.Children.Add(Ui.Press("Destructive", Ui.Text("Clear", 11, FontWeights.Medium, "OnBrandInk"), () =>
-        {
-            confirmingClear = false;
-            ClipboardController.Shared.Clear();
-        }).Docked(Dock.Right));
-        content.Children.Add(Ui.Press("Footer", "Cancel", () =>
-        {
-            confirmingClear = false;
-            RefreshOptions();
-        }).With(b => b.Margin = new Thickness(0, 0, 4, 0)).Docked(Dock.Right));
-        return new Border { Height = 26, Padding = new Thickness(6, 0, 0, 0), Child = content };
     }
 
     // MARK: - Recording a shortcut

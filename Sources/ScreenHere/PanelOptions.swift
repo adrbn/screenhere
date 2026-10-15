@@ -18,18 +18,20 @@ struct PanelOptions: View {
                     .foregroundStyle(Theme.warning)
             }
 
+            group("Captures", first: true)
             if window.isEnabled {
                 PanelRow(icon: "macwindow", title: "Window shortcut") {
                     ShortcutRecorder(window: window)
                 }
             }
-
             PanelRow(icon: "photo.on.rectangle.angled", title: "Preview on captured screen") {
                 toggle(isOn: model.showsOwnPreview, set: { model.setOwnPreview($0) })
                     .help("Show the capture preview on the screen it came from, "
                           + "instead of wherever macOS puts it")
             }
+
             if blur.isEnabled {
+                group("Privacy screen")
                 PanelRow(icon: "rectangle.on.rectangle.slash", title: "Blur the screens you're not on") {
                     toggle(isOn: blur.blursOthers, set: blur.setBlursOthers)
                         .help("On top of ⇧⌘9, frost every display the pointer is not on by itself. "
@@ -44,12 +46,8 @@ struct PanelOptions: View {
                               + "the curtain comes down.")
                 }
             }
-            PanelRow(icon: "power", title: "Launch at login") {
-                toggle(isOn: model.launchesAtLogin, set: model.setLaunchAtLogin)
-            }
 
-            sharedClipboard
-
+            group("Clipboard")
             if clipboard.isEnabled {
                 PanelRow(icon: "link", title: "Link previews", beta: true) {
                     toggle(isOn: links.isEnabled, set: links.setEnabled)
@@ -57,11 +55,8 @@ struct PanelOptions: View {
                               + "when the list shows it, without cookies, and never one that looks private "
                               + "or single-use. The site sees the visit, as it would if you opened the link.")
                 }
-                PanelRow(icon: "clock.arrow.circlepath", title: "Show history",
-                         trailingText: "\(clipboard.history.items.count)",
-                         action: { HistoryPicker.shared.show() })
-                PanelRow(icon: "trash", title: "Clear history", action: confirmClear)
             }
+            sharedClipboard
         }
         .onAppear { clipboard.refreshAccess() }
     }
@@ -150,23 +145,23 @@ struct PanelOptions: View {
         }
     }
 
+    /// Names what the settings under it change. The first one needs no gap
+    /// above it: the tiles already left one.
+    private func group(_ title: String, first: Bool = false) -> some View {
+        Text(title)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 8)
+            .padding(.top, first ? 0 : 9)
+            .padding(.bottom, 3)
+    }
+
     private func toggle(isOn: Bool, set: @escaping (Bool) -> Void) -> some View {
         Toggle("", isOn: Binding(get: { isOn }, set: set))
             .toggleStyle(.switch)
             .controlSize(.mini)
             .tint(Theme.brand)
             .labelsHidden()
-    }
-
-    private func confirmClear() {
-        let alert = NSAlert()
-        alert.messageText = "Clear clipboard history?"
-        alert.informativeText = "Everything ScreenHere kept will be deleted from this Mac. "
-            + "What is on the clipboard right now stays."
-        alert.addButton(withTitle: "Clear")
-        alert.addButton(withTitle: "Cancel")
-        alert.buttons.first?.hasDestructiveAction = true
-        NSApp.activate(ignoringOtherApps: true)
-        if alert.runModal() == .alertFirstButtonReturn { clipboard.clear() }
     }
 }

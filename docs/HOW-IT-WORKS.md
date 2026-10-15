@@ -87,7 +87,7 @@ Recognition runs on device with Vision's accurate engine, in a small reader proc
 
 ## Clipboard history
 
-Switch on **History** in the panel, then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> anywhere: a list of the last 200 texts and pictures you copied (up to 100 MB of pictures) opens under the pointer, without taking focus from the app you are in. Type to filter, use the arrows to choose, <kbd>Return</kbd> to copy, <kbd>Esc</kbd> to close, then <kbd>⌘</kbd><kbd>V</kbd> as usual. **Clear history** empties it, from the panel or the list.
+Switch on **History** in the panel, then press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> anywhere: a list of the last 200 texts and pictures you copied (up to 100 MB of pictures) opens under the pointer, without taking focus from the app you are in. Type to filter, use the arrows to choose, <kbd>Return</kbd> to copy, <kbd>Esc</kbd> to close, then <kbd>⌘</kbd><kbd>V</kbd> as usual. **Clear…** at the foot of the list empties it.
 
 A copied picture is read as well: the fast engine looks at it in a throwaway process, like <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd>'s, and the words that come back title its row and go into the search — so a screenshot of a page is told apart from the next one, and found by typing what it says. Half a second on device, nothing uploaded. Pictures copied before this existed are read as their rows appear in the list, one at a time; one with nothing to read stays **Image** and is not looked at again.
 
@@ -125,7 +125,7 @@ A visit could spend a link that signs you in or resets a password, so ScreenHere
 
 Builds are signed with Developer ID and notarized, so the grant survives updates: you authorise ScreenHere once, not again after every release. Updates are checked once a day and install in place through [Sparkle](https://sparkle-project.org).
 
-**Launch at login matters.** ScreenHere leaves the system shortcut disabled while it holds it, so a Mac that restarts without it running would have <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> doing nothing until you reopen the app. ScreenHere hands the shortcut back when the Mac shuts down, so you are never stranded, but launching at login is what keeps it working.
+**Launch at login matters.** ScreenHere leaves the system shortcut disabled while it holds it, so a Mac that restarts without it running would have <kbd>⇧</kbd><kbd>⌘</kbd><kbd>3</kbd> doing nothing until you reopen the app. ScreenHere hands the shortcut back when the Mac shuts down, so you are never stranded, but launching at login is what keeps it working — **Open at Login**, under the ⋯ button in the panel.
 
 **Hiding the menu-bar icon.** **Hide Menu Bar Icon**, under **⋯** in the panel, removes the icon; the app keeps running and the shortcuts keep working. Opening ScreenHere again from `/Applications` or Spotlight brings the icon back for good.
 

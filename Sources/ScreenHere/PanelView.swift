@@ -26,10 +26,9 @@ struct PanelView: View {
             PanelTiles(model: model, window: .shared, text: .shared, clipboard: .shared)
                 .padding(.horizontal, 10)
 
-            SectionTitle(text: "Options")
-                .padding(.top, 10)
             PanelOptions(model: model, window: .shared, clipboard: .shared, links: .shared, sync: .shared)
                 .padding(.horizontal, 6)
+                .padding(.top, 10)
 
             Divider()
                 .padding(.horizontal, 12)
@@ -45,6 +44,11 @@ struct PanelView: View {
             UpdateButton(updater: updater, action: onCheckUpdates)
             Spacer(minLength: 8)
             Menu {
+                // Set once and never looked at again, which is what this menu
+                // is for — the options list is for what gets changed.
+                Toggle("Open at Login", isOn: Binding(get: { model.launchesAtLogin },
+                                                      set: { model.setLaunchAtLogin($0) }))
+                Divider()
                 Button("View on GitHub", action: onOpenGitHub)
                 Divider()
                 Button("Restore macOS Shortcuts", action: onRestoreShortcuts)

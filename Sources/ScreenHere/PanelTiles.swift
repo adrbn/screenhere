@@ -35,6 +35,7 @@ struct PanelTiles: View {
             FeatureTile(icon: "doc.on.clipboard", title: "History",
                         detail: clipboard.isEnabled && text.historyUnavailable
                             ? .warning("Shortcut in use") : .keys("⇧⌘8"),
+                        count: clipboard.isEnabled ? clipboard.history.items.count : nil,
                         isOn: clipboard.isEnabled,
                         help: "Keep what you copy — text, images, files — on this Mac, up to 100 MB of images. "
                             + "Password managers' copies are skipped.") {
@@ -72,6 +73,9 @@ private struct FeatureTile: View {
     let title: String
     var beta = false
     let detail: TileDetail
+    /// How much the feature is holding, when that is the thing worth knowing
+    /// at a glance — the kept copies, so no row has to repeat them.
+    var count: Int?
     let isOn: Bool
     let help: String
     let action: () -> Void
@@ -111,6 +115,12 @@ private struct FeatureTile: View {
                 }
                 .lineLimit(1)
                 Spacer(minLength: 0)
+                if let count {
+                    Text("\(count)")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.horizontal, 9)
             .frame(maxWidth: .infinity)
