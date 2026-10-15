@@ -8,6 +8,7 @@ on:
     paths: ['windows/**', '.github/workflows/windows.yml']
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -43,3 +44,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
         run: gh release upload $env:TAG windows/dist/ScreenHere-Windows.exe --clobber
+  # The README's pictures of the Windows app are drawn by the app itself, so
+  # they need a Windows machine. This is that machine.
+  shots:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Draw the pictures
+        shell: pwsh
+        run: |
+          dotnet build windows/ScreenHere -c Debug --nologo -v q
+          $exe = Get-ChildItem windows/ScreenHere/bin/Debug -Recurse -Filter ScreenHere.exe | Select-Object -First 1
+          Start-Process $exe.FullName -ArgumentList '--shots', "$env:RUNNER_TEMP\shots" -Wait
+          Get-ChildItem "$env:RUNNER_TEMP\shots"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-shots
+          path: ${{ runner.temp }}/shots
