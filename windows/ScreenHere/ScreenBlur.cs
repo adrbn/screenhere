@@ -75,6 +75,7 @@ internal static class ScreenBlur
     {
         var settings = Settings.Current;
         if (!settings.BlurEnabled) IsCurtain = false;
+        Hotkeys.HoldDesktop = IsCurtain;
 
         if (settings is { BlurEnabled: true, BlurOtherScreens: true })
         {
@@ -101,6 +102,7 @@ internal static class ScreenBlur
         timer?.Stop();
         timer = null;
         IsCurtain = false;
+        Hotkeys.HoldDesktop = false;
         foreach (var cover in Covers.Values) cover.Close();
         Covers.Clear();
         covered = [];

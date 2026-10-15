@@ -80,6 +80,10 @@ final class ScreenBlur: ObservableObject {
     func toggleCurtain() {
         guard isEnabled else { return }
         isCurtain.toggle()
+        // The desktop has to stop sliding for the frost to stay put, and that
+        // needs Accessibility. Asked for the first time the curtain comes
+        // down, not at launch: nothing else in ScreenHere wants it.
+        if isCurtain, !SwipeGuard.isAllowed { SwipeGuard.ask() }
         update()
     }
 
@@ -95,6 +99,7 @@ final class ScreenBlur: ObservableObject {
     func stop() {
         registrar.unbindAll()
         isCurtain = false
+        SwipeGuard.stop()
         timer?.invalidate()
         timer = nil
         for window in windows.values { window.orderOut(nil) }
@@ -110,6 +115,7 @@ final class ScreenBlur: ObservableObject {
             MainActor.assumeIsolated { ScreenBlur.shared.toggleCurtain() }
         }
         if isEnabled, #available(macOS 14.0, *) { Task { await ScreenShade.warm() } }
+        if isCurtain { SwipeGuard.start() } else { SwipeGuard.stop() }
 
         if isEnabled && blursOthers {
             if timer == nil {
