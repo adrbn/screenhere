@@ -1,7 +1,26 @@
 import SwiftUI
 
-/// The settings of the features that are on, so the panel only grows with
-/// what is in use.
+/// A room of settings, named after what it changes. The panel shows one room
+/// at a time, so its height no longer grows with everything that is switched
+/// on — and a setting gets space for the sentence that explains it.
+enum PanelPage: String, CaseIterable, Identifiable {
+    case captures = "Captures"
+    case privacy = "Privacy screen"
+    case clipboard = "Clipboard"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .captures: "camera.viewfinder"
+        case .privacy: "eye.slash"
+        case .clipboard: "doc.on.clipboard"
+        }
+    }
+}
+
+/// The settings of the features that are on: the rooms to go to, or the one
+/// that is open.
 struct PanelOptions: View {
     @ObservedObject var model: PanelModel
     @ObservedObject var window: WindowShortcuts
@@ -10,55 +29,92 @@ struct PanelOptions: View {
     @ObservedObject var sync: SyncController
     @ObservedObject var blur: ScreenBlur = .shared
 
+    /// The room on show, or none for the list of rooms.
+    var page: PanelPage?
+    var open: (PanelPage) -> Void = { _ in }
+
     var body: some View {
         VStack(spacing: 1) {
-            if (clipboard.isEnabled || sync.isEnabled) && clipboard.needsPasteAccess {
-                PanelRow(icon: "exclamationmark.triangle", title: "Allow clipboard access…",
-                         action: clipboard.openPasteAccessSettings)
-                    .foregroundStyle(Theme.warning)
+            switch page {
+            case .none: doors
+            case .captures: captures
+            case .privacy: privacy
+            case .clipboard: clipboardSettings
             }
-
-            group("Captures", first: true)
-            if window.isEnabled {
-                PanelRow(icon: "macwindow", title: "Window shortcut") {
-                    ShortcutRecorder(window: window)
-                }
-            }
-            PanelRow(icon: "photo.on.rectangle.angled", title: "Preview on captured screen") {
-                toggle(isOn: model.showsOwnPreview, set: { model.setOwnPreview($0) })
-                    .help("Show the capture preview on the screen it came from, "
-                          + "instead of wherever macOS puts it")
-            }
-
-            if blur.isEnabled {
-                group("Privacy screen")
-                PanelRow(icon: "rectangle.on.rectangle.slash", title: "Blur the screens you're not on") {
-                    toggle(isOn: blur.blursOthers, set: blur.setBlursOthers)
-                        .help("On top of ⇧⌘9, frost every display the pointer is not on by itself. "
-                              + "A screen clears the moment your pointer arrives, and frosts again "
-                              + "a second after it leaves.")
-                }
-                PanelRow(icon: "hand.raised", title: "Freeze the desktop", beta: true) {
-                    toggle(isOn: blur.holdsDisplay, set: blur.setHoldsDisplay)
-                        .help("While ⇧⌘9 is down, hold every frosted display so macOS cannot "
-                              + "slide to another desktop — the frost can no longer blink off "
-                              + "mid-swipe. Taking a display over flashes it for an instant as "
-                              + "the curtain comes down.")
-                }
-            }
-
-            group("Clipboard")
-            if clipboard.isEnabled {
-                PanelRow(icon: "link", title: "Link previews", beta: true) {
-                    toggle(isOn: links.isEnabled, set: links.setEnabled)
-                        .help("Show the title and icon of copied links in the list. ScreenHere visits a link "
-                              + "when the list shows it, without cookies, and never one that looks private "
-                              + "or single-use. The site sees the visit, as it would if you opened the link.")
-                }
-            }
-            sharedClipboard
         }
         .onAppear { clipboard.refreshAccess() }
+    }
+
+    /// The way in to each room, and anything that cannot wait behind a door.
+    @ViewBuilder private var doors: some View {
+        if (clipboard.isEnabled || sync.isEnabled) && clipboard.needsPasteAccess {
+            PanelRow(icon: "exclamationmark.triangle", title: "Allow clipboard access…",
+                     action: clipboard.openPasteAccessSettings)
+                .foregroundStyle(Theme.warning)
+        }
+        ForEach(PanelPage.allCases) { page in
+            // A frosted screen is the only one whose room is empty when the
+            // feature is off.
+            if page != .privacy || blur.isEnabled {
+                PanelRow(icon: page.icon, title: page.rawValue, action: { open(page) }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var captures: some View {
+        if window.isEnabled {
+            PanelRow(icon: "macwindow", title: "Window shortcut") {
+                ShortcutRecorder(window: window)
+            }
+        }
+        PanelRow(icon: "photo.on.rectangle.angled", title: "Preview on captured screen") {
+            toggle(isOn: model.showsOwnPreview, set: { model.setOwnPreview($0) })
+        }
+        note("The preview appears on the screen the capture came from, instead of "
+             + "wherever macOS puts it. Click it to find the file, drag it into another "
+             + "app, or flick it to the right to dismiss it.")
+    }
+
+    @ViewBuilder private var privacy: some View {
+        PanelRow(icon: "rectangle.on.rectangle.slash", title: "Blur the screens you're not on") {
+            toggle(isOn: blur.blursOthers, set: blur.setBlursOthers)
+        }
+        note("On top of ⇧⌘9, frost every display the pointer is not on by itself. A screen "
+             + "clears the moment your pointer arrives, and frosts again a second after it leaves.")
+        PanelRow(icon: "hand.raised", title: "Freeze the desktop", beta: true) {
+            toggle(isOn: blur.holdsDisplay, set: blur.setHoldsDisplay)
+        }
+        note("While ⇧⌘9 is down, hold every frosted display so macOS cannot slide to another "
+             + "desktop — the frost can no longer blink off mid-swipe. Taking a display over "
+             + "flashes it for an instant as the curtain comes down.")
+    }
+
+    @ViewBuilder private var clipboardSettings: some View {
+        if clipboard.isEnabled {
+            PanelRow(icon: "link", title: "Link previews", beta: true) {
+                toggle(isOn: links.isEnabled, set: links.setEnabled)
+            }
+            note("Show the title and icon of copied links in the list. ScreenHere visits a link "
+                 + "when the list shows it, without cookies, and never one that looks private or "
+                 + "single-use. The site sees the visit, as it would if you opened the link.")
+        }
+        sharedClipboard
+    }
+
+    /// What a setting does, in the room's own space — which is the point of
+    /// having rooms: this used to have to fit in a tooltip.
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 10.5))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.bottom, 6)
     }
 
     /// The clipboard shared with one other device, and the few steps that
@@ -143,18 +199,6 @@ struct PanelOptions: View {
                 PanelRow(icon: "link", title: "Connect a device…", action: sync.beginPairing)
             }
         }
-    }
-
-    /// Names what the settings under it change. The first one needs no gap
-    /// above it: the tiles already left one.
-    private func group(_ title: String, first: Bool = false) -> some View {
-        Text(title)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 8)
-            .padding(.top, first ? 0 : 9)
-            .padding(.bottom, 3)
     }
 
     private func toggle(isOn: Bool, set: @escaping (Bool) -> Void) -> some View {

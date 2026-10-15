@@ -17,7 +17,36 @@ struct PanelView: View {
     var onOpenGitHub: () -> Void
     var onQuit: () -> Void
 
+    /// The room on show, or none for the panel as it opens.
+    @State private var page: PanelPage?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let page {
+                room(page)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else {
+                hall
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+
+            Divider()
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+            footer
+        }
+        .frame(width: 320)
+        .clipped()
+        .animation(reduceMotion ? .easeOut(duration: 0.12) : .easeInOut(duration: 0.22), value: page)
+        .background(WindowReader { model.attach(window: $0) })
+        // Reopened from the menu bar, the panel starts where it started last
+        // time: at the front.
+        .onDisappear { page = nil }
+    }
+
+    /// The panel as it opens: what the app does, and the way in to the settings.
+    private var hall: some View {
         VStack(alignment: .leading, spacing: 0) {
             PanelHero(model: model)
                 .padding(10)
@@ -26,17 +55,35 @@ struct PanelView: View {
             PanelTiles(model: model, window: .shared, text: .shared, clipboard: .shared)
                 .padding(.horizontal, 10)
 
-            PanelOptions(model: model, window: .shared, clipboard: .shared, links: .shared, sync: .shared)
+            PanelOptions(model: model, window: .shared, clipboard: .shared, links: .shared,
+                         sync: .shared, open: { page = $0 })
                 .padding(.horizontal, 6)
                 .padding(.top, 10)
-
-            Divider()
-                .padding(.horizontal, 12)
-                .padding(.top, 6)
-            footer
         }
-        .frame(width: 320)
-        .background(WindowReader { model.attach(window: $0) })
+    }
+
+    /// One room of settings, with the way back where every Mac puts it.
+    private func room(_ page: PanelPage) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button { self.page = nil } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(page.rawValue)
+                        .font(.system(size: 12, weight: .semibold))
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(Theme.brand)
+                .padding(.horizontal, 12)
+                .frame(height: 34)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            PanelOptions(model: model, window: .shared, clipboard: .shared, links: .shared,
+                         sync: .shared, page: page)
+                .padding(.horizontal, 6)
+        }
     }
 
     private var footer: some View {
