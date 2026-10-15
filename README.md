@@ -86,6 +86,12 @@ The last 200 things you copied — text, images, files — in a list under your 
 
 **Two computers?** Turn on **Shared clipboard** (a beta) on both, connect them once with a code, and what you copy on one is on the clipboard of the other — a Mac and a PC included. It stays on your network: [how it works](docs/SHARED-CLIPBOARD.md).
 
+## One more thing · Blur the screens you're not on
+
+A colleague walks over to your desk and reads your other screen while you talk. Turn on **Blur the screens you're not on** in the panel and every display your pointer is not on is frosted over — the shapes are still there, the words are not. The screen clears the instant your pointer arrives on it, and frosts again a second and a half after it leaves, so glancing across does nothing.
+
+It is the window server's own blur of what is behind a window, the same one the menu bar uses: nothing is captured, nothing is recorded, no permission is asked for, and what is behind it stays live and in place. On Windows it is the desktop manager's acrylic, with a flat shade on versions too old for it. Off until you turn it on, and nothing happens with a single display.
+
 ## On Windows
 
 <picture>

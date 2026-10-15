@@ -33,6 +33,7 @@ internal static class Features
         ClipboardController.Shared.Watch();
         Rebind();
         if (Settings.PreviewOnCapturedScreen) ScreenshotWatcher.Start();
+        ScreenBlur.Update();
     }
 
     public static KeyShortcut Shortcut(Feature feature) => Shortcuts.GetValueOrDefault(feature, KeyShortcut.Default(feature));
@@ -55,6 +56,13 @@ internal static class Features
             case Feature.History: ClipboardController.Shared.SetEnabled(on); break;
         }
         Change();
+    }
+
+    public static void SetBlur(bool on)
+    {
+        Settings.BlurOtherScreens = on;
+        Change();
+        ScreenBlur.Update();
     }
 
     /// Turning this on also covers the captures other tools save, so every

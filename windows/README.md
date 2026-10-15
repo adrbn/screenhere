@@ -34,7 +34,7 @@ No administrator rights, no account, nothing outside your user profile. ScreenHe
   <img src="../docs/assets/windows-history-light.png" width="596" alt="The clipboard history on Windows: a searchable list of recently copied texts, files and images" />
 </picture>
 
-The panel is the same as the Mac's: the map of your displays with the one under the pointer filled in, a tile that switches each feature on and off, and the options of whatever is on — **Preview on captured screen**, **Launch at login**, **Shared clipboard** (beta), **Link previews** (beta).
+The panel is the same as the Mac's: the map of your displays with the one under the pointer filled in, a tile that switches each feature on and off, and the options of whatever is on — **Preview on captured screen**, **Blur the screens you're not on**, **Launch at login**, **Shared clipboard** (beta), **Link previews** (beta).
 
 **Shared clipboard** gives this PC and a Mac — or another PC — one clipboard, on the same network and nowhere else: [how to connect them, and what it does](../docs/SHARED-CLIPBOARD.md).
 
@@ -62,6 +62,8 @@ One limit: Windows does not show an app the keys typed into a window running as 
 **The clipboard history** is told about each copy by Windows (`AddClipboardFormatListener`); nothing is polled. It stays in `%APPDATA%\ScreenHere`, readable by your account only. Copies that password managers mark as private — `ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory` — are never recorded. Pictures are kept as files, up to 100 MB; copied files are kept as their addresses.
 
 **Link previews** follow the same rules as on the Mac: a link is visited when the list shows it, never when you copy it, without cookies, over https only, the top megabyte at most, never on a metered connection, and never when it looks private or single-use. The name is looked up by ScreenHere itself and the visit goes to the address that was checked.
+
+**Blurring the other screens.** **Blur the screens you're not on** puts a window over every display the pointer has been away from for a second and a half, and takes it off the moment the pointer comes back. The window is click-through (`WS_EX_TRANSPARENT`), never takes focus, and is filled by the desktop manager's own acrylic blur of what is behind it: nothing is captured and nothing is recorded, so what is behind stays live. Windows older than 10 version 1803 cannot blur behind a window and get a flat dark shade instead, which hides as much. The pointer is read five times a second, and the windows only change when the answer does.
 
 **From a script.** A second launch can press a shortcut for the one that is running: `ScreenHere.exe --do screen`, `window`, `text` or `history`.
 

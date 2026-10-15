@@ -8,6 +8,7 @@ struct PanelOptions: View {
     @ObservedObject var clipboard: ClipboardController
     @ObservedObject var links: LinkPreviewController
     @ObservedObject var sync: SyncController
+    @ObservedObject var blur: ScreenBlur = .shared
 
     var body: some View {
         VStack(spacing: 1) {
@@ -27,6 +28,12 @@ struct PanelOptions: View {
                 toggle(isOn: model.showsOwnPreview, set: { model.setOwnPreview($0) })
                     .help("Show the capture preview on the screen it came from, "
                           + "instead of wherever macOS puts it")
+            }
+            PanelRow(icon: "eye.slash", title: "Blur the screens you're not on") {
+                toggle(isOn: blur.isEnabled, set: blur.setEnabled)
+                    .help("Frost every display the pointer is not on, so what is on the screens beside "
+                          + "you cannot be read from across the desk. A screen clears the moment your "
+                          + "pointer arrives, and frosts again a second after it leaves.")
             }
             PanelRow(icon: "power", title: "Launch at login") {
                 toggle(isOn: model.launchesAtLogin, set: model.setLaunchAtLogin)

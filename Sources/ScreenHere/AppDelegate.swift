@@ -47,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ClipboardController.shared.activate()
         TextShortcuts.shared.activate()
         WindowShortcuts.shared.activate()
+        ScreenBlur.shared.activate()
 
         greetIfNeeded()
     }
@@ -88,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Workspace notifications are posted on the main thread.
         MainActor.assumeIsolated {
             TextShortcuts.shared.releaseSystemShortcuts()
+            ScreenBlur.shared.stop()
             ClipboardController.shared.flush()
         }
     }
@@ -171,6 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Workspace notifications are posted on the main thread.
         MainActor.assumeIsolated {
             TextShortcuts.shared.releaseSystemShortcuts()
+            ScreenBlur.shared.stop()
             ClipboardController.shared.flush()
         }
     }

@@ -18,6 +18,8 @@ internal sealed class Settings
     public bool HistoryEnabled { get; set; }
     public bool LinkPreviews { get; set; }
     public bool PreviewOnCapturedScreen { get; set; } = true;
+    /// Frost the displays the pointer is not on. Off until turned on.
+    public bool BlurOtherScreens { get; set; }
     /// Where Win+Shift+3 sends a capture: the Screenshots folder, or the clipboard.
     public bool CapturesToClipboard { get; set; }
     /// The shared clipboard: off until turned on, and nothing to share with

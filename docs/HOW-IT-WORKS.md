@@ -93,6 +93,12 @@ A copied picture is read as well: the fast engine looks at it in a throwaway pro
 
 The history stays on your Mac, in `~/Library/Application Support/ScreenHere`, readable by your account only. Copies that password managers mark as concealed are never recorded. On macOS 15.4 and later, macOS asks before an app reads the clipboard in the background: choose **Always Allow**. Until it is allowed, the panel shows **Allow clipboard access…**, which opens the setting.
 
+## Blurring the screens you're not on
+
+**Blur the screens you're not on**, in the panel, frosts every display the pointer is not on, so what sits on the screens beside you cannot be read from across the desk. A screen clears the instant the pointer arrives on it and frosts again a second and a half after it leaves, so glancing across does not frost the screen in your face. Nothing happens with a single display, and nothing happens while the pointer is between two of them: frosting the screen being used would be worse than frosting nothing.
+
+The frost is an `NSVisualEffectView` blending behind its window, above the menu bar and over a full-screen app, that no click can reach. It is the window server's own blur of what is behind a window: nothing is captured, nothing is recorded, no Screen Recording permission is needed for it, and what is behind it stays live and in place. The pointer is read five times a second, which costs nothing, and the overlays only change when the answer does. They all come off when you switch the setting off and when ScreenHere quits.
+
 ## Link previews (beta)
 
 **Link previews** (off by default) shows a copied link as its page's title and its site's icon. To get them, ScreenHere visits the link (when the list shows it, never when you copy it) the way a careful stranger would: no cookies, no saved passwords, tracking parameters left behind, the top megabyte of the page at most, and nothing at all on a Low Data Mode network. The site still sees a visit from your IP address, as it would if you opened the link. A firewall such as LuLu will ask about it the first time.

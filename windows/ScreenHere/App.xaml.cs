@@ -186,6 +186,7 @@ public partial class App : Application
         ClipboardController.Shared.Flush();
         Hotkeys.Uninstall();
         ScreenshotWatcher.Stop();
+        ScreenBlur.Stop();
         Tray.Shared.Dispose();
         try { instance?.ReleaseMutex(); } catch { }
         Shutdown();

@@ -432,6 +432,11 @@ internal sealed class PanelWindow : Window
             trailing: Switch(settings.PreviewOnCapturedScreen, Features.SetPreview,
                 "Show a preview of each capture on the screen it came from. Click it to find the file, "
                 + "drag it into another app, or flick it to the right to dismiss it.")));
+        options.Children.Add(Row(Ui.Icon(Glyph.Lock, 12), "Blur the screens you're not on",
+            trailing: Switch(settings.BlurOtherScreens, Features.SetBlur,
+                "Frost every display the pointer is not on, so what is on the screens beside you cannot be "
+                + "read from across the desk. A screen clears the moment your pointer arrives, and frosts "
+                + "again a second after it leaves.")));
         options.Children.Add(Row(Ui.Icon(Glyph.Power, 12), "Launch at login",
             trailing: Switch(LoginItem.IsEnabled, on =>
             {
