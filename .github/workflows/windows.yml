@@ -116,3 +116,43 @@ jobs:
           $moved = (Get-Item $installed).VersionInfo.FileVersion
           if ($moved -ne '1.0.1.0') { throw "the installed copy stayed at $moved" }
           "took over, and moved in"
+
+  # The button in the panel, against the real release on GitHub: an old build
+  # installs itself, is told to update, and must come back as the new one.
+  update:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - name: An old build updates itself
+        shell: pwsh
+        env:
+          # Its own folder, so the update runs without touching an installed copy.
+          SCREENHERE_PROFILE: ${{ runner.temp }}\profile
+        run: |
+          ./windows/scripts/publish.ps1 -Version 1.0.0
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\old" | Out-Null
+          $exe = "$env:RUNNER_TEMP\old\ScreenHere.exe"
+          Copy-Item windows/dist/ScreenHere-Windows.exe $exe
+
+          Start-Process $exe; Start-Sleep 20
+          "--- before: " + ((Get-Process ScreenHere -ErrorAction SilentlyContinue).MainModule.FileVersionInfo.FileVersion -join ', ')
+          Start-Process $exe -ArgumentList '--do', 'update'
+          # Seventy megabytes, then the swap and the relaunch.
+          Start-Sleep 90
+
+          foreach ($log in 'update.log', 'errors.log') {
+            $path = "$env:SCREENHERE_PROFILE\$log"
+            if (Test-Path $path) { "--- $log"; Get-Content $path }
+          }
+          Get-ChildItem "$env:RUNNER_TEMP\old" | ForEach-Object { "    $($_.Name)  $($_.Length)" }
+
+          $alive = @(Get-Process ScreenHere -ErrorAction SilentlyContinue |
+                     ForEach-Object { $_.MainModule.FileVersionInfo.FileVersion })
+          "--- after: $($alive -join ', ')"
+          Get-Process ScreenHere -ErrorAction SilentlyContinue | Stop-Process -Force
+          $latest = (Invoke-RestMethod 'https://api.github.com/repos/adrbn/screenhere/releases/latest').tag_name.TrimStart('v')
+          if ($alive -notcontains "$latest.0") { throw "updating left $($alive -join ', '), not $latest" }
+          "updated to $latest"
