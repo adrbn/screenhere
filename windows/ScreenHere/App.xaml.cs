@@ -230,12 +230,23 @@ public partial class App : Application
     {
         if (quitting) return;
         quitting = true;
-        ClipboardController.Shared.Flush();
-        Hotkeys.Uninstall();
-        ScreenshotWatcher.Stop();
-        ScreenBlur.Stop();
-        Tray.Shared.Dispose();
-        try { instance?.ReleaseMutex(); } catch { }
+        // Each step on its own. One that fails must not stop the others: a
+        // copy left half dismantled still holds the lock and has already
+        // given the keyboard back, so nothing works and nothing can take its
+        // place — which is worse than any one of these steps failing.
+        Action[] steps =
+        [
+            () => ClipboardController.Shared.Flush(),
+            () => Hotkeys.Uninstall(),
+            () => ScreenshotWatcher.Stop(),
+            () => ScreenBlur.Stop(),
+            () => Tray.Shared.Dispose(),
+            () => instance?.ReleaseMutex(),
+        ];
+        foreach (var step in steps)
+        {
+            try { step(); } catch (Exception error) { Log(error); }
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
