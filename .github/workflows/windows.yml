@@ -83,10 +83,12 @@ jobs:
       - name: An older copy, then a newer one
         shell: pwsh
         run: |
-          ./windows/scripts/publish.ps1 -Version 1.0.0
-          Copy-Item windows/dist/ScreenHere-Windows.exe "$env:RUNNER_TEMP\old.exe"
-          ./windows/scripts/publish.ps1 -Version 1.0.1
-          Copy-Item windows/dist/ScreenHere-Windows.exe "$env:RUNNER_TEMP\new.exe"
+          # Each one keeps the app's own name, or Get-Process would not find it.
+          foreach ($v in '1.0.0', '1.0.1') {
+            ./windows/scripts/publish.ps1 -Version $v
+            New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\$v" | Out-Null
+            Copy-Item windows/dist/ScreenHere-Windows.exe "$env:RUNNER_TEMP\$v\ScreenHere.exe"
+          }
 
           function Show($when) {
             "--- $when"
@@ -95,9 +97,9 @@ jobs:
             "    mark: " + (Get-Content "$env:APPDATA\ScreenHere\running" -ErrorAction SilentlyContinue)
           }
 
-          Start-Process "$env:RUNNER_TEMP\old.exe"; Start-Sleep 15
+          Start-Process "$env:RUNNER_TEMP\1.0.0\ScreenHere.exe"; Start-Sleep 15
           Show "the older copy alone"
-          Start-Process "$env:RUNNER_TEMP\new.exe"; Start-Sleep 30
+          Start-Process "$env:RUNNER_TEMP\1.0.1\ScreenHere.exe"; Start-Sleep 30
           Show "after the newer one started"
 
           foreach ($log in 'errors.log', 'update.log') {
@@ -105,8 +107,12 @@ jobs:
             if (Test-Path $path) { "--- $log"; Get-Content $path | Select-Object -Last 40 }
           }
 
-          $versions = @(Get-Process ScreenHere -ErrorAction SilentlyContinue |
-                        ForEach-Object { $_.MainModule.FileVersionInfo.FileVersion })
+          $alive = @(Get-Process ScreenHere -ErrorAction SilentlyContinue |
+                     ForEach-Object { "$($_.MainModule.FileVersionInfo.FileVersion) $($_.MainModule.FileName)" })
           Get-Process ScreenHere -ErrorAction SilentlyContinue | Stop-Process -Force
-          if ($versions -notcontains '1.0.1.0') { throw "the newer copy did not take over: $($versions -join ', ')" }
-          "took over"
+          $installed = "$env:LOCALAPPDATA\Programs\ScreenHere\ScreenHere.exe"
+          if ($alive -ne "1.0.1.0 $installed") { throw "expected 1.0.1 installed and alone, got: $($alive -join '; ')" }
+          # And the installed copy is the new one, so the next login starts it.
+          $moved = (Get-Item $installed).VersionInfo.FileVersion
+          if ($moved -ne '1.0.1.0') { throw "the installed copy stayed at $moved" }
+          "took over, and moved in"
