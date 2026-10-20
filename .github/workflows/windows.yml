@@ -161,4 +161,9 @@ jobs:
           Get-Process ScreenHere -ErrorAction SilentlyContinue | Stop-Process -Force
           $latest = (Invoke-RestMethod 'https://api.github.com/repos/adrbn/screenhere/releases/latest').tag_name.TrimStart('v')
           if ($alive -notcontains "$latest.0") { throw "updating left $($alive -join ', '), not $latest" }
+          # And it updated by updating, not by the newer copy taking over from
+          # a copy that fell over on its way out: that rescue hides the fault.
+          if ((Get-Content "$env:SCREENHERE_PROFILE\update.log" -Raw) -match 'failed:') {
+            throw "the update went through its error path"
+          }
           "updated to $latest"
