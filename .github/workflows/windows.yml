@@ -88,13 +88,25 @@ jobs:
           ./windows/scripts/publish.ps1 -Version 1.0.1
           Copy-Item windows/dist/ScreenHere-Windows.exe "$env:RUNNER_TEMP\new.exe"
 
-          Start-Process "$env:RUNNER_TEMP\old.exe"; Start-Sleep 12
-          "running: " + (Get-Content "$env:APPDATA\ScreenHere\running" -ErrorAction SilentlyContinue)
-          Start-Process "$env:RUNNER_TEMP\new.exe"; Start-Sleep 20
+          function Show($when) {
+            "--- $when"
+            Get-Process ScreenHere -ErrorAction SilentlyContinue |
+              ForEach-Object { "    $($_.Id) $($_.MainModule.FileVersionInfo.FileVersion) $($_.MainModule.FileName)" }
+            "    mark: " + (Get-Content "$env:APPDATA\ScreenHere\running" -ErrorAction SilentlyContinue)
+          }
 
-          $alive = @(Get-Process ScreenHere -ErrorAction SilentlyContinue)
-          $alive | ForEach-Object { "$($_.Id) $($_.MainModule.FileVersionInfo.FileVersion) $($_.MainModule.FileName)" }
-          $versions = $alive | ForEach-Object { $_.MainModule.FileVersionInfo.FileVersion }
+          Start-Process "$env:RUNNER_TEMP\old.exe"; Start-Sleep 15
+          Show "the older copy alone"
+          Start-Process "$env:RUNNER_TEMP\new.exe"; Start-Sleep 30
+          Show "after the newer one started"
+
+          foreach ($log in 'errors.log', 'update.log') {
+            $path = "$env:APPDATA\ScreenHere\$log"
+            if (Test-Path $path) { "--- $log"; Get-Content $path | Select-Object -Last 40 }
+          }
+
+          $versions = @(Get-Process ScreenHere -ErrorAction SilentlyContinue |
+                        ForEach-Object { $_.MainModule.FileVersionInfo.FileVersion })
           Get-Process ScreenHere -ErrorAction SilentlyContinue | Stop-Process -Force
           if ($versions -notcontains '1.0.1.0') { throw "the newer copy did not take over: $($versions -join ', ')" }
           "took over"
