@@ -210,6 +210,17 @@ public partial class App : Application
     /// hook is gone.
     public void Quit()
     {
+        StandDown();
+        Shutdown();
+    }
+
+    /// Everything Quit does except ending the program. An update needs the
+    /// two apart: it replaces the very file this program's own code is read
+    /// from, and a single-file build cannot reach a class it has not already
+    /// touched once that file is a different program. So it stands down
+    /// first, while it can still read itself, and only then swaps the file.
+    public void StandDown()
+    {
         if (quitting) return;
         quitting = true;
         ClipboardController.Shared.Flush();
@@ -218,7 +229,6 @@ public partial class App : Application
         ScreenBlur.Stop();
         Tray.Shared.Dispose();
         try { instance?.ReleaseMutex(); } catch { }
-        Shutdown();
     }
 
     protected override void OnExit(ExitEventArgs e)

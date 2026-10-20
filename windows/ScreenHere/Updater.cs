@@ -136,19 +136,33 @@ internal sealed class Updater
         var fresh = running + ".new";
         var old = running + ".old";
         Trace($"install {CurrentVersion} -> {AvailableVersion} at {running}");
+        var stoodDown = false;
         try
         {
             // Off the interface's thread: seventy megabytes written a chunk at
             // a time would otherwise run entirely on it, and a thread that is
             // busy writing paints nothing and answers no button — which is
             // what updating looked like from the outside.
+            //
+            // Unless an earlier try already put the new build in place and
+            // only failed to start it: then there is nothing left to fetch.
+            if (!Swapped(running, old)) await Task.Run(() => Download(downloadUrl, fresh));
+            else Trace("already swapped, nothing to fetch");
+
+            // The shortcuts, the clipboard and the tray icon are given back
+            // here rather than after the swap, because from the swap onwards
+            // this program can no longer read anything out of itself: the file
+            // its code comes from is the new build. Starting the new copy is
+            // all that is left, and that it has already done once.
+            using (Process.GetCurrentProcess()) { }
+            ((App)System.Windows.Application.Current).StandDown();
+            stoodDown = true;
+            Trace("stood down");
+
             await Task.Run(async () =>
             {
-                // Unless an earlier try already put the new build in place and
-                // only failed to start it: then there is nothing left to fetch.
                 if (!Swapped(running, old))
                 {
-                    await Download(downloadUrl, fresh);
                     // A running program cannot be overwritten, but it can be
                     // renamed — once whatever read the new file lets go of it.
                     Atomic.Insist(() => File.Delete(old));
@@ -156,12 +170,13 @@ internal sealed class Updater
                     Atomic.Insist(() => File.Move(fresh, running));
                     Trace("swapped");
                 }
-                else Trace("already swapped, nothing to fetch");
                 await Relaunch(running);
             });
             Trace("quitting");
-            ((App)System.Windows.Application.Current).Quit();
-            Trace("quit");
+            // Not the ordinary shutdown: it would run through the window and
+            // the application's own closing, and that is reading out of a file
+            // that is no longer this program.
+            Environment.Exit(0);
         }
         catch (Exception error)
         {
@@ -173,6 +188,15 @@ internal sealed class Updater
                 try { File.Move(old, running); Trace("put the old one back"); } catch { }
             }
             try { File.Delete(fresh); } catch { }
+            if (stoodDown)
+            {
+                // The shortcuts are already Windows' again and the tray icon
+                // is gone: there is nothing left here to go back to, so
+                // whichever build is in place is started afresh.
+                Trace("standing back up");
+                await Relaunch(running);
+                Environment.Exit(1);
+            }
             Set(Status.Idle, notify: true);
             // The new build may be in place all the same: opening ScreenHere
             // again is then all it takes.

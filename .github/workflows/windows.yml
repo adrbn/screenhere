@@ -133,6 +133,12 @@ jobs:
           SCREENHERE_PROFILE: ${{ runner.temp }}\profile
         run: |
           ./windows/scripts/publish.ps1 -Version 1.0.0
+          # The preview after a capture off, so the watcher never starts and
+          # the classes its shutdown needs are never read out of the build:
+          # with them already loaded, a swapped file goes unnoticed.
+          New-Item -ItemType Directory -Force $env:SCREENHERE_PROFILE | Out-Null
+          '{ "PreviewOnCapturedScreen": false, "Greeted": true }' |
+            Set-Content "$env:SCREENHERE_PROFILE\settings.json"
           New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\old" | Out-Null
           $exe = "$env:RUNNER_TEMP\old\ScreenHere.exe"
           Copy-Item windows/dist/ScreenHere-Windows.exe $exe
