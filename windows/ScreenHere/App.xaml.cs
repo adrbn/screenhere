@@ -42,6 +42,13 @@ public partial class App : Application
             ((App)Current).Later(4500, () => SyncController.Shared.SetEnabled(false));
         })),
         ("sync-status", () => Trying(() => File.WriteAllText(Path.Combine(Settings.Folder, "sync-status.txt"), SyncController.Shared.Describe()))),
+        // Opens the panel and waits for the keys of a new screen shortcut,
+        // as clicking its field does.
+        ("record", () => Trying(() =>
+        {
+            PanelWindow.Open();
+            ((App)Current).Later(600, () => PanelWindow.Begin(Feature.Screen));
+        })),
         // A newer copy, asking the one already running to step aside.
         ("quit", () => ((App)Current).Quit()),
     ];

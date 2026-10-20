@@ -167,3 +167,44 @@ jobs:
             throw "the update went through its error path"
           }
           "updated to $latest"
+
+  # Typing a new shortcut at the panel, with keys the hook sees exactly as it
+  # sees a person's: pressed, then read back out of the settings.
+  shortcut:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - name: Record Ctrl+Shift+4 for the screen
+        shell: pwsh
+        env:
+          SCREENHERE_PROFILE: ${{ runner.temp }}\profile
+        run: |
+          ./windows/scripts/publish.ps1 -Version 1.0.0
+          $exe = "$env:RUNNER_TEMP\ScreenHere.exe"
+          Copy-Item windows/dist/ScreenHere-Windows.exe $exe
+          Start-Process $exe; Start-Sleep 20
+
+          Add-Type -Name Keys -Namespace Win -MemberDefinition '
+            [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, int extra);'
+          function Press([byte]$key) { [Win.Keys]::keybd_event($key, 0, 0, 0); Start-Sleep -Milliseconds 120 }
+          function Release([byte]$key) { [Win.Keys]::keybd_event($key, 0, 2, 0); Start-Sleep -Milliseconds 120 }
+
+          Start-Process $exe -ArgumentList '--do', 'record'; Start-Sleep 5
+          Press 0x11; Press 0x10; Press 0x34          # Ctrl, Shift, 4
+          Release 0x34; Release 0x10; Release 0x11
+          Start-Sleep 4
+
+          $file = "$env:SCREENHERE_PROFILE\settings.json"
+          "--- settings.json"; Get-Content $file
+          foreach ($log in 'errors.log') {
+            if (Test-Path "$env:SCREENHERE_PROFILE\$log") { "--- $log"; Get-Content "$env:SCREENHERE_PROFILE\$log" }
+          }
+          Get-Process ScreenHere -ErrorAction SilentlyContinue | Stop-Process -Force
+
+          # 0x34 is the 4 of the digit row, 10 is Ctrl and Shift together.
+          $kept = (Get-Content $file -Raw | ConvertFrom-Json).Shortcuts.Screen
+          if ("$kept" -ne '52 10') { throw "the panel kept '$kept', not Ctrl+Shift+4" }
+          "recorded Ctrl+Shift+4"

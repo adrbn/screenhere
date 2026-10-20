@@ -784,9 +784,7 @@ internal sealed class PanelWindow : Window
                 Features.EndRecording();
                 return;
             }
-            held = "";
-            problem = null;
-            Features.BeginRecording(feature, (key, modifiers) => OnRecorded(feature, key, modifiers));
+            Record(feature);
         }, recording ? "Press the new shortcut, or Esc to cancel"
            : "Click, then press the shortcut you want." + (captures ? $" Adding {shortcut.ClipboardKey} sends the capture to the clipboard." : ""));
         field.Tag = new CornerRadius(6);
@@ -813,6 +811,17 @@ internal sealed class PanelWindow : Window
         }
         row.Children.Add(field);
         return row;
+    }
+
+    /// Waits for the keys of a new shortcut, as clicking the field does —
+    /// which is also how the checks type a shortcut at the panel.
+    public static void Begin(Feature feature) => current?.Record(feature);
+
+    private void Record(Feature feature)
+    {
+        held = "";
+        problem = null;
+        Features.BeginRecording(feature, (key, modifiers) => OnRecorded(feature, key, modifiers));
     }
 
     private void OnRecorded(Feature feature, int key, Modifiers modifiers)
