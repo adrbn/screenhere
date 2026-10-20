@@ -67,3 +67,34 @@ jobs:
         with:
           name: windows-shots
           path: ${{ runner.temp }}/shots
+
+  # Two copies, the newer one started over the older: the new one must end up
+  # the one running. It needs two builds and a real Windows session, so it
+  # lives here rather than in the unit tests.
+  takeover:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: An older copy, then a newer one
+        shell: pwsh
+        run: |
+          ./windows/scripts/publish.ps1 -Version 1.0.0
+          Copy-Item windows/dist/ScreenHere-Windows.exe "$env:RUNNER_TEMP\old.exe"
+          ./windows/scripts/publish.ps1 -Version 1.0.1
+          Copy-Item windows/dist/ScreenHere-Windows.exe "$env:RUNNER_TEMP\new.exe"
+
+          Start-Process "$env:RUNNER_TEMP\old.exe"; Start-Sleep 12
+          "running: " + (Get-Content "$env:APPDATA\ScreenHere\running" -ErrorAction SilentlyContinue)
+          Start-Process "$env:RUNNER_TEMP\new.exe"; Start-Sleep 20
+
+          $alive = @(Get-Process ScreenHere -ErrorAction SilentlyContinue)
+          $alive | ForEach-Object { "$($_.Id) $($_.MainModule.FileVersionInfo.FileVersion) $($_.MainModule.FileName)" }
+          $versions = $alive | ForEach-Object { $_.MainModule.FileVersionInfo.FileVersion }
+          Get-Process ScreenHere -ErrorAction SilentlyContinue | Stop-Process -Force
+          if ($versions -notcontains '1.0.1.0') { throw "the newer copy did not take over: $($versions -join ', ')" }
+          "took over"

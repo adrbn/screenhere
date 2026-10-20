@@ -42,6 +42,8 @@ public partial class App : Application
             ((App)Current).Later(4500, () => SyncController.Shared.SetEnabled(false));
         })),
         ("sync-status", () => Trying(() => File.WriteAllText(Path.Combine(Settings.Folder, "sync-status.txt"), SyncController.Shared.Describe()))),
+        // A newer copy, asking the one already running to step aside.
+        ("quit", () => ((App)Current).Quit()),
     ];
 
     private static void Trying(Action action)
@@ -89,7 +91,7 @@ public partial class App : Application
         var asked = Array.IndexOf(e.Args, "--do") is var at and >= 0 && at + 1 < e.Args.Length ? e.Args[at + 1] : null;
         instance = new Mutex(false, Scope + ".Instance");
         var signals = Commands.Select(c => Signal(c.Name)).ToArray();
-        if (!Acquire(instance, updated ? 8_000 : 0))
+        if (!Acquire(instance, updated ? 8_000 : 0) && !TakeOver(instance, asked))
         {
             signals[Math.Max(0, Array.FindIndex(Commands, c => c.Name == asked))].Set();
             instance = null;
@@ -103,6 +105,9 @@ public partial class App : Application
             Shutdown();
             return;
         }
+
+        // Which version is running, for the copy that starts next.
+        try { Directory.CreateDirectory(Settings.Folder); File.WriteAllText(Mark, Updater.CurrentVersion); } catch { }
 
         Theme.Apply();
         Hotkeys.Install();
@@ -145,6 +150,30 @@ public partial class App : Application
         {
             Reopen();
         }
+    }
+
+    /// Where the running copy says which version it is.
+    private static string Mark => Path.Combine(Settings.Folder, "running");
+
+    /// A copy newer than the one already running replaces it, rather than
+    /// handing it the panel it came to replace: double-clicking a build you
+    /// just downloaded otherwise opens the old one and quits, which looks
+    /// exactly like a download that did nothing.
+    ///
+    /// Only an ordinary launch does this. Asked to do something — a shortcut,
+    /// an update — the newcomer passes the request on as before.
+    private static bool TakeOver(Mutex instance, string? asked)
+    {
+        if (asked != null || !Version.TryParse(Updater.CurrentVersion, out var mine)) return false;
+        Version? running;
+        try { running = Version.TryParse(File.ReadAllText(Mark).Trim(), out var found) ? found : null; }
+        catch { return false; }
+        if (running == null || mine <= running) return false;
+        Signal("quit").Set();
+        // It has its own quitting to do — the clipboard is written out, the
+        // hooks come off — and if it cannot, the panel it would have opened
+        // is still better than nothing.
+        return Acquire(instance, 8_000);
     }
 
     private static bool Acquire(Mutex mutex, int milliseconds)
