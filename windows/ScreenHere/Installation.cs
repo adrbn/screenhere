@@ -34,7 +34,12 @@ internal static class Installation
                 return false;
             }
             Directory.CreateDirectory(Home);
-            Replace(running, Target);
+            // The copy being replaced may still be letting go of its own file: a
+            // newer copy moves in the moment the lock is free, which is a moment
+            // before Windows closes the old process. Giving up here would leave
+            // the new version running from the Downloads folder and the old one
+            // installed, to come back at the next login.
+            Atomic.Insist(() => File.Copy(running, Target, overwrite: true));
             AddToStartMenu();
             Process.Start(new ProcessStartInfo(Target, string.Join(" ", arguments.Append("--moved-in"))) { UseShellExecute = false });
             return true;
@@ -43,27 +48,6 @@ internal static class Installation
         {
             // Could not move in: run from here, as a portable app would.
             return false;
-        }
-    }
-
-    /// The copy being replaced may still be letting go of its own file: a
-    /// newer copy asks the one running to quit and moves in the moment the
-    /// lock is free, which is a moment before Windows closes the old process.
-    /// Giving up here would leave the new version running from the Downloads
-    /// folder and the old one installed, to come back at the next login.
-    private static void Replace(string from, string to)
-    {
-        for (var tries = 20; ; tries--)
-        {
-            try
-            {
-                File.Copy(from, to, overwrite: true);
-                return;
-            }
-            catch (Exception error) when (tries > 0 && error is IOException or UnauthorizedAccessException)
-            {
-                Thread.Sleep(150);
-            }
         }
     }
 

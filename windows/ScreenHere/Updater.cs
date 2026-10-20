@@ -149,10 +149,11 @@ internal sealed class Updater
                 if (!Swapped(running, old))
                 {
                     await Download(downloadUrl, fresh);
-                    // A running program cannot be overwritten, but it can be renamed.
-                    File.Delete(old);
-                    File.Move(running, old);
-                    File.Move(fresh, running);
+                    // A running program cannot be overwritten, but it can be
+                    // renamed — once whatever read the new file lets go of it.
+                    Atomic.Insist(() => File.Delete(old));
+                    Atomic.Insist(() => File.Move(running, old));
+                    Atomic.Insist(() => File.Move(fresh, running));
                     Trace("swapped");
                 }
                 else Trace("already swapped, nothing to fetch");
@@ -165,6 +166,12 @@ internal sealed class Updater
         catch (Exception error)
         {
             Trace("failed: " + error);
+            // Half an exchange would leave nothing at all where ScreenHere is
+            // started from, so the old copy goes back where it was.
+            if (!File.Exists(running) && File.Exists(old))
+            {
+                try { File.Move(old, running); Trace("put the old one back"); } catch { }
+            }
             try { File.Delete(fresh); } catch { }
             Set(Status.Idle, notify: true);
             // The new build may be in place all the same: opening ScreenHere

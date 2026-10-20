@@ -80,6 +80,27 @@ internal sealed class Settings
 
 internal static class Atomic
 {
+    /// Runs a file operation again for a few seconds while the file is held.
+    /// A program that has just been written is often still being read by the
+    /// antivirus, and a copy that was asked to quit lets go of its own image
+    /// a moment after it releases the lock — neither is a reason to give up.
+    public static void Insist(Action operation)
+    {
+        for (var tries = 20; ; tries--)
+        {
+            try
+            {
+                operation();
+                return;
+            }
+            catch (Exception error) when (tries > 0 && error is IOException or UnauthorizedAccessException)
+            {
+                Thread.Sleep(150);
+            }
+        }
+    }
+
+
     /// Writes beside the file and swaps it in, so a crash mid-write leaves the
     /// old file rather than half of the new one.
     public static void Write(string path, byte[] bytes)
