@@ -172,10 +172,12 @@ public partial class App : Application
     private static bool TakeOver(Mutex instance, string? asked)
     {
         if (asked != null || !Version.TryParse(Updater.CurrentVersion, out var mine)) return false;
-        Version? running;
-        try { running = Version.TryParse(File.ReadAllText(Mark).Trim(), out var found) ? found : null; }
-        catch { return false; }
-        if (running == null || mine <= running) return false;
+        Version? running = null;
+        // No mark at all means the copy running is older than the first one
+        // that wrote one down, so it is older than this one whatever it is.
+        try { if (Version.TryParse(File.ReadAllText(Mark).Trim(), out var found)) running = found; }
+        catch { }
+        if (running != null && mine <= running) return false;
         Signal("quit").Set();
         // It has its own quitting to do — the clipboard is written out, the
         // hooks come off — and if it cannot, the panel it would have opened

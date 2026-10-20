@@ -117,6 +117,20 @@ jobs:
           if ($moved -ne '1.0.1.0') { throw "the installed copy stayed at $moved" }
           "took over, and moved in"
 
+          # Now the copy running leaves no mark at all, which is every version
+          # before marks were written down: it must still be stepped aside.
+          Start-Process $installed; Start-Sleep 15
+          Remove-Item "$env:APPDATA\ScreenHere\running" -Force
+          $was = (Get-Process ScreenHere).Id
+          Show "an unmarked copy, before"
+          Start-Process "$env:RUNNER_TEMP\1.0.1\ScreenHere.exe"; Start-Sleep 30
+          Show "an unmarked copy, after"
+          $now = @(Get-Process ScreenHere -ErrorAction SilentlyContinue)
+          Get-Process ScreenHere -ErrorAction SilentlyContinue | Stop-Process -Force
+          if ($now.Count -ne 1) { throw "expected one copy, got $($now.Count)" }
+          if ($now[0].Id -eq $was) { throw "the unmarked copy was left running" }
+          "took over from an unmarked copy"
+
   # The button in the panel, against the real release on GitHub: an old build
   # installs itself, is told to update, and must come back as the new one.
   update:
