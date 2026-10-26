@@ -127,6 +127,9 @@ internal sealed class ClipboardController
     private readonly ClipboardHistoryStore store = new();
     private readonly ClipboardImageStore images = new();
     private readonly Dictionary<string, BitmapSource> thumbnails = new();
+    /// The pictures whose thumbnail is being decoded, so a list that is
+    /// rebuilt while they arrive does not ask for the same one again.
+    private readonly HashSet<string> thumbnailsAsked = [];
     private readonly DispatcherTimer saveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly DispatcherTimer readTimer = new() { Interval = TimeSpan.FromMilliseconds(90) };
     private HwndSource? listener;
@@ -449,12 +452,27 @@ internal sealed class ClipboardController
         });
     }
 
+    /// The small picture a row leads with, once it has been decoded. A
+    /// thumbnail is a read from disk and a decompression, and a history full of
+    /// screenshots did every one of them on the interface's thread before the
+    /// list drew a single row — which is why it took so long to appear and
+    /// answered nothing while it did. Asked for here, drawn when it is there.
     public BitmapSource? Thumbnail(ClipImage image)
     {
         if (thumbnails.TryGetValue(image.Digest, out var cached)) return cached;
-        var small = images.Thumbnail(image);
-        if (small != null) thumbnails[image.Digest] = small;
-        return small;
+        if (posed || !thumbnailsAsked.Add(image.Digest)) return null;
+        Task.Run(() =>
+        {
+            // Frozen where it is decoded, so the interface can use it as it is.
+            var small = images.Thumbnail(image);
+            if (small == null) return;
+            Application.Current?.Dispatcher.BeginInvoke(() =>
+            {
+                thumbnails[image.Digest] = small;
+                Changed?.Invoke();
+            });
+        });
+        return null;
     }
 
     /// Where the picture sits on disk, so a row can be dragged into any app.
@@ -479,6 +497,7 @@ internal sealed class ClipboardController
         captionsAsked.Clear();
         store.Delete();
         thumbnails.Clear();
+        thumbnailsAsked.Clear();
         FileThumbnails.Shared.Clear();
         LinkPreviews.Shared.Clear();
         Task.Run(images.DeleteAll);
@@ -518,7 +537,11 @@ internal sealed class ClipboardController
             saveTimer.Stop();
             saveTimer.Start();
         }
-        foreach (var digest in dropped) thumbnails.Remove(digest);
+        foreach (var digest in dropped)
+        {
+            thumbnails.Remove(digest);
+            thumbnailsAsked.Remove(digest);
+        }
         if (dropped.Count > 0 && !posed) Task.Run(() => images.Remove(dropped));
         Changed?.Invoke();
     }
