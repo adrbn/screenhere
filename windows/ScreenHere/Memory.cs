@@ -1,13 +1,17 @@
-using System.Diagnostics;
 using System.Runtime;
-using System.Runtime.InteropServices;
 using System.Windows.Threading;
 
 namespace ScreenHere;
 
 /// A tray app spends nearly all its time doing nothing, and should weigh
 /// next to nothing while it does. A capture is tens of megabytes of pixels for
-/// a second; once things have gone quiet, they are handed back to Windows.
+/// a second; once things have gone quiet, they are collected.
+///
+/// What is no longer done here is emptying the working set. Handing every page
+/// back to Windows read well in Task Manager, but the next panel or list then
+/// read itself back from disk — with an antivirus between the two, that is
+/// seconds of nothing before anything appears, which is what the app being
+/// slow to open looked like from the outside.
 internal static class Memory
 {
     private static DispatcherTimer? timer;
@@ -39,17 +43,7 @@ internal static class Memory
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            try
-            {
-                using var process = Process.GetCurrentProcess();
-                EmptyWorkingSet(process.Handle);
-            }
-            catch
-            {
-            }
         };
         return made;
     }
-
-    [DllImport("psapi.dll")] private static extern bool EmptyWorkingSet(IntPtr process);
 }
