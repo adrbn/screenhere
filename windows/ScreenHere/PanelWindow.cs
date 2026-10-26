@@ -44,6 +44,9 @@ internal sealed class PanelWindow : Window
     private readonly ContentControl update = new() { Focusable = false };
     private readonly DispatcherTimer poll = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private bool closing;
+    /// The ··· menu while it is up. It is a window of its own, so a click in
+    /// it is a click outside the panel.
+    private ContextMenu? openMenu;
     private string held = "";
     private string? problem;
     private Func<Size, Point>? anchor;
@@ -136,8 +139,13 @@ internal sealed class PanelWindow : Window
             }
             Memory.SettleSoon(3);
         };
-        // Clicking anywhere else dismisses it, like any flyout.
-        Deactivated += (_, _) => Dismiss();
+        // Clicking anywhere else dismisses it, like any flyout — but the ···
+        // menu is a window of its own, and the panel handing the keyboard to
+        // its own menu is not the user going elsewhere.
+        Deactivated += (_, _) =>
+        {
+            if (openMenu?.IsOpen != true) Dismiss();
+        };
         // The panel grows and shrinks with what is switched on; it stays
         // attached to the edge it opened from.
         SizeChanged += (_, _) =>
@@ -161,6 +169,9 @@ internal sealed class PanelWindow : Window
     {
         if (closing) return;
         closing = true;
+        // Its placement target is about to go: a menu left open over nothing
+        // has no panel left to close it, and stays on screen.
+        if (openMenu != null) openMenu.IsOpen = false;
         Tray.Shared.PanelClosedAt = DateTime.Now;
         Close();
     }
@@ -170,6 +181,11 @@ internal sealed class PanelWindow : Window
     private void ClickedAt(int x, int y)
     {
         if (closing) return;
+        // Choosing something in the ··· menu is a click outside the panel, and
+        // closing the panel from under an open menu left the menu behind,
+        // with nothing above it to dismiss it. The menu closes itself; the
+        // click that closes it is not the panel's to act on.
+        if (openMenu?.IsOpen == true) return;
         var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         if (handle == IntPtr.Zero || !Native.GetWindowRect(handle, out var frame)) return;
         var shadow = (int)(ShadowRoom * VisualTreeHelper.GetDpi(this).DpiScaleX);
@@ -307,6 +323,11 @@ internal sealed class PanelWindow : Window
                 Dismiss();
                 Tray.Shared.SetHidden(true);
             }));
+            menu.Closed += (_, _) =>
+            {
+                if (openMenu == menu) openMenu = null;
+            };
+            openMenu = menu;
             menu.IsOpen = true;
         }, "More");
         footer.Children.Add(more.Docked(Dock.Right));
