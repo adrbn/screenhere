@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace ScreenHere;
 
@@ -44,6 +45,13 @@ internal sealed class HistoryWindow : Window
     private Point lastPointer;
     /// The window that had the keyboard before the list took it.
     private IntPtr previous;
+    /// Rebuilding the list is the expensive part of it, and what the list is
+    /// waiting for arrives one piece at a time: a picture decoded, the words
+    /// read in another, a page's title, a file's icon. Rebuilt once they have
+    /// settled rather than once per piece — a history full of screenshots
+    /// rebuilt itself a hundred times over, and a list rebuilt under the
+    /// pointer is a list that cannot be scrolled.
+    private readonly DispatcherTimer redraw = new() { Interval = TimeSpan.FromMilliseconds(200) };
 
     public static bool IsOpen => current != null;
 
@@ -84,14 +92,20 @@ internal sealed class HistoryWindow : Window
         Content = Ui.Surface(Build(), radius: 14, margin: ShadowRoom, shadow: 0.4);
         lastPointer = Displays.Pointer();
 
-        clipboard.Changed += Reload;
-        links.Changed += Reload;
-        filePictures.Changed += Reload;
+        redraw.Tick += (_, _) =>
+        {
+            redraw.Stop();
+            Reload(keepPlace: true);
+        };
+        clipboard.Changed += ReloadSoon;
+        links.Changed += ReloadSoon;
+        filePictures.Changed += ReloadSoon;
         Closed += (_, _) =>
         {
-            clipboard.Changed -= Reload;
-            links.Changed -= Reload;
-            filePictures.Changed -= Reload;
+            redraw.Stop();
+            clipboard.Changed -= ReloadSoon;
+            links.Changed -= ReloadSoon;
+            filePictures.Changed -= ReloadSoon;
             if (current == this)
             {
                 current = null;
@@ -193,8 +207,17 @@ internal sealed class HistoryWindow : Window
     private static Border Divider() =>
         new Border { Height = 1 }.With(b => b.SetResourceReference(Border.BackgroundProperty, "P10"));
 
-    private void Reload()
+    private void ReloadSoon()
     {
+        redraw.Stop();
+        redraw.Start();
+    }
+
+    /// `keepPlace` for a rebuild the user did not ask for: what arrived while
+    /// they were reading is no reason to take them back to the top of the list.
+    private void Reload(bool keepPlace = false)
+    {
+        var place = keepPlace ? scroller.VerticalOffset : 0;
         results = clipboard.History.Matching(search.Text);
         selection = Math.Clamp(selection, 0, Math.Max(0, results.Count - 1));
         if (clipboard.History.Items.Count == 0) confirmingClear = false;
@@ -209,6 +232,10 @@ internal sealed class HistoryWindow : Window
         }
         body.Content = results.Count == 0 ? EmptyState() : scroller;
         RefreshFooter();
+        // Once the new rows have been measured: until then the list is one row
+        // tall as far as the scroller knows, and anywhere but the top is out
+        // of its reach.
+        if (place > 0) Dispatcher.BeginInvoke(() => scroller.ScrollToVerticalOffset(place), DispatcherPriority.Loaded);
     }
 
     private UIElement EmptyState()
